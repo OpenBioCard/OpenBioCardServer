@@ -42,7 +42,7 @@ public class ClassicAdminController : ControllerBase
                 return Unauthorized(new { error = "Invalid token" });
             }
 
-            if (account.UserName != request.UserName)
+            if (account.UserName != request.Username)
             {
                 return Unauthorized(new { error = "Token does not match username" });
             }
@@ -70,7 +70,7 @@ public class ClassicAdminController : ControllerBase
     /// </summary>
     [HttpPost("users/list")]
     public async Task<IActionResult> GetUsersPost([FromBody] ClassicAdminRequest request) =>
-        await GetUsersInternal(request.Token, request.UserName);
+        await GetUsersInternal(request.Token, request.Username);
 
     /// <summary>
     /// Get list of all users (GET version)
@@ -85,7 +85,7 @@ public class ClassicAdminController : ControllerBase
             token = request.Token;
         }
 
-        return await GetUsersInternal(token, request.UserName);
+        return await GetUsersInternal(token, request.Username);
     }
 
     private async Task<IActionResult> GetUsersInternal(string token, string username)
@@ -114,7 +114,7 @@ public class ClassicAdminController : ControllerBase
                 .Where(a => a.Type != UserType.Root)
                 .Select(a => new ClassicUserInfo
                 {
-                    UserName = a.UserName,
+                    Username = a.UserName,
                     Type = a.Type.ToString().ToLower()
                 })
                 .ToListAsync();
@@ -143,7 +143,7 @@ public class ClassicAdminController : ControllerBase
                 return Unauthorized(new { error = "Invalid token" });
             }
 
-            if (account.UserName != request.UserName)
+            if (account.UserName != request.Username)
             {
                 return Unauthorized(new { error = "Token does not match username" });
             }
@@ -166,7 +166,7 @@ public class ClassicAdminController : ControllerBase
             }
 
             // Check if username already exists
-            if (await _context.Accounts.AnyAsync(a => a.UserName == request.NewUserName))
+            if (await _context.Accounts.AnyAsync(a => a.UserName == request.NewUsername))
             {
                 return Conflict(new { error = "Username already exists" });
             }
@@ -175,7 +175,7 @@ public class ClassicAdminController : ControllerBase
             var (hash, salt) = PasswordHasher.HashPassword(request.Password);
             var newAccount = new Account
             {
-                UserName = request.NewUserName,
+                UserName = request.NewUsername,
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 Type = userType
@@ -188,7 +188,7 @@ public class ClassicAdminController : ControllerBase
             var profile = new ProfileEntity
             {
                 AccountId = newAccount.Id,
-                Username = request.NewUserName,
+                Username = request.NewUsername,
                 AvatarType = AssetType.Text,
                 AvatarText = "👤"
             };
@@ -200,7 +200,7 @@ public class ClassicAdminController : ControllerBase
             var newToken = await _authService.CreateTokenAsync(newAccount);
 
             _logger.LogInformation("Admin {AdminUser} created new user: {NewUser} (Type: {Type})", 
-                request.UserName, request.NewUserName, userType);
+                request.Username, request.NewUsername, userType);
 
             return Ok(new 
             { 
@@ -230,7 +230,7 @@ public class ClassicAdminController : ControllerBase
                 return Unauthorized(new { error = "Invalid token" });
             }
 
-            if (account.UserName != request.UserName)
+            if (account.UserName != request.Username)
             {
                 return Unauthorized(new { error = "Token does not match username" });
             }
@@ -265,7 +265,7 @@ public class ClassicAdminController : ControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Admin {AdminUser} deleted user: {TargetUser}", 
-                request.UserName, targetUsername);
+                request.Username, targetUsername);
 
             return Ok(new { message = "User deleted" });
         }

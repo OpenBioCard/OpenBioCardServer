@@ -39,7 +39,7 @@ public class ClassicAuthController : ControllerBase
         try
         {
             // Validate required fields
-            if (string.IsNullOrWhiteSpace(request.UserName) || 
+            if (string.IsNullOrWhiteSpace(request.Username) || 
                 string.IsNullOrWhiteSpace(request.Password) ||
                 string.IsNullOrWhiteSpace(request.Type))
             {
@@ -47,7 +47,7 @@ public class ClassicAuthController : ControllerBase
             }
 
             // Check if username already exists
-            if (await _context.Accounts.AnyAsync(a => a.UserName == request.UserName))
+            if (await _context.Accounts.AnyAsync(a => a.UserName == request.Username))
             {
                 return Conflict(new { error = "Username already exists" });
             }
@@ -68,7 +68,7 @@ public class ClassicAuthController : ControllerBase
             var (hash, salt) = PasswordHasher.HashPassword(request.Password);
             var account = new Account
             {
-                UserName = request.UserName,
+                UserName = request.Username,
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 Type = userType
@@ -81,7 +81,7 @@ public class ClassicAuthController : ControllerBase
             var profile = new ProfileEntity
             {
                 AccountId = account.Id,
-                Username = request.UserName,
+                Username = request.Username,
                 AvatarType = AssetType.Text,
                 AvatarText = "👤"
             };
@@ -93,7 +93,7 @@ public class ClassicAuthController : ControllerBase
             var token = await _authService.CreateTokenAsync(account);
 
             _logger.LogInformation("New user registered: {Username} (Type: {Type})", 
-                request.UserName, userType);
+                request.Username, userType);
 
             return Ok(new ClassicTokenResponse { Token = token });
         }
@@ -116,7 +116,7 @@ public class ClassicAuthController : ControllerBase
             var rootPassword = _config["AuthSettings:RootPassword"];
 
             // Handle root user login
-            if (request.UserName == rootUsername)
+            if (request.Username == rootUsername)
             {
                 if (request.Password == rootPassword)
                 {
@@ -142,7 +142,7 @@ public class ClassicAuthController : ControllerBase
 
             // Handle regular user login
             var account = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.UserName == request.UserName);
+                .FirstOrDefaultAsync(a => a.UserName == request.Username);
 
             if (account == null)
             {
@@ -160,7 +160,7 @@ public class ClassicAuthController : ControllerBase
             account.LastLogin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("User logged in: {Username}", request.UserName);
+            _logger.LogInformation("User logged in: {Username}", request.Username);
 
             return Ok(new ClassicTokenResponse { Token = userToken });
         }
@@ -186,7 +186,7 @@ public class ClassicAuthController : ControllerBase
                 return Unauthorized(new { error = "Invalid token" });
             }
 
-            if (account.UserName != request.UserName)
+            if (account.UserName != request.Username)
             {
                 return Unauthorized(new { error = "Token does not match username" });
             }
@@ -201,7 +201,7 @@ public class ClassicAuthController : ControllerBase
             _context.Accounts.Remove(account);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("User deleted their account: {Username}", request.UserName);
+            _logger.LogInformation("User deleted their account: {Username}", request.Username);
 
             return Ok(new { message = "Account deleted successfully" });
         }

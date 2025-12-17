@@ -11,8 +11,8 @@ public class PasswordHasher
     private const int SaltSize = 16; // 盐值长度（字节）
     private const int HashSize = 32; // 哈希长度（字节）
     private const int Iterations = 3; // 迭代次数
-    private const int MemorySize = 65536; // 内存使用 (KB) - 64MB
-    private const int Parallelism = 4; // 并行度
+    private const int MemorySize = 8192; // 内存使用 (KB)
+    private const int Parallelism = 2; // 并行度
 
     /// <summary>
     /// 生成密码哈希和盐值

@@ -5,7 +5,7 @@ namespace OpenBioCardServer.Models.DTOs.Classic;
 public class ClassicDeleteRequest
 {
     [JsonProperty("username")]
-    public string UserName { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
     
     [JsonProperty("token")]
     public string Token { get; set; } = string.Empty;

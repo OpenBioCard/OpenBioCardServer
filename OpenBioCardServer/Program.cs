@@ -74,6 +74,7 @@ public class Program
         // Services
         // builder.Services.AddScoped<...>();
         builder.Services.AddScoped<ClassicAuthService>();
+        builder.Services.AddScoped<AuthService>();
 
         var app = builder.Build();
 

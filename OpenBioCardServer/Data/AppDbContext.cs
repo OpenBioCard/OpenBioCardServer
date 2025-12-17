@@ -25,7 +25,7 @@ public class AppDbContext : DbContext
         // Account configuration
         modelBuilder.Entity<Account>(entity =>
         {
-            // Unique index on UserName for fast lookup
+            // Unique index on Username for fast lookup
             entity.HasIndex(e => e.UserName).IsUnique();
             
             // One-to-One with Profile
@@ -54,7 +54,7 @@ public class AppDbContext : DbContext
         // Profile configuration
         modelBuilder.Entity<ProfileEntity>(entity =>
         {
-            // Unique index on UserName (redundant with Account but useful)
+            // Unique index on Username (redundant with Account but useful)
             entity.HasIndex(e => e.Username).IsUnique();
             
             // One-to-Many relationships with all child entities
