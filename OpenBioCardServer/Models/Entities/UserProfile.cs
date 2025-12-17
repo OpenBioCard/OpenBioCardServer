@@ -17,8 +17,10 @@ public class UserProfile
     public string? Pronouns { get; set; }
     
     /// <summary>
-    /// 头像 - 可以是 emoji/字符 或 MediaAsset ID（GUID 格式）
-    /// 格式：emoji、字符串、或 "asset:{GUID}"
+    /// 头像 - 可以是 emoji/字符 或图片
+    /// 存储格式：
+    /// - emoji 或纯文本：直接存储（如 "👨"）
+    /// - BASE64 图片（前端提交）：转存到 MediaAsset 后存为 "asset:{GUID}"
     /// </summary>
     public string? Avatar { get; set; }
     
@@ -27,8 +29,10 @@ public class UserProfile
     public string? Website { get; set; }
     
     /// <summary>
-    /// 背景图 - MediaAsset ID 或直接的 BASE64
-    /// 格式：空、BASE64 字符串、或 "asset:{GUID}"
+    /// 背景图 - 仅支持图片
+    /// 存储格式：
+    /// - 空值：不显示背景
+    /// - BASE64 图片（前端提交）：转存到 MediaAsset 后存为 "asset:{GUID}"
     /// </summary>
     public string? Background { get; set; }
 
@@ -42,9 +46,8 @@ public class UserProfile
     public List<SocialLinkItem> SocialLinks { get; set; } = new();
     public List<ProjectItem> Projects { get; set; } = new();
     public List<GalleryItem> Gallery { get; set; } = new();
-    
     public List<WorkExperience> WorkExperiences { get; set; } = new();
-    public List<SchoolExperiences> Educations { get; set; } = new();
+    public List<SchoolExperiences> SchoolExperiences { get; set; } = new();
 
     // 导航属性
     public UserAccount Account { get; set; } = null!;

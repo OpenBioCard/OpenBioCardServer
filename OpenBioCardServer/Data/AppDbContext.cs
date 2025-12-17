@@ -53,7 +53,7 @@ public class AppDbContext : DbContext
             entity.OwnsMany(p => p.Gallery, b => b.ToJson());
             
             entity.OwnsMany(p => p.WorkExperiences, b => b.ToJson());
-            entity.OwnsMany(p => p.Educations, b => b.ToJson());
+            entity.OwnsMany(p => p.SchoolExperiences, b => b.ToJson());
         });
 
         // 配置 MediaAsset

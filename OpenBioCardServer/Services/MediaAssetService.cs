@@ -14,6 +14,9 @@ public class MediaAssetService
     private readonly AppDbContext _context;
     private readonly ILogger<MediaAssetService> _logger;
     private readonly AssetSettings _assetSettings;
+    
+    // 资产引用格式前缀
+    private const string AssetRefPrefix = "asset:";
 
     public MediaAssetService(
         AppDbContext context, 
@@ -23,6 +26,210 @@ public class MediaAssetService
         _context = context;
         _logger = logger;
         _assetSettings = assetSettings.Value;
+    }
+
+    /// <summary>
+    /// 处理用户资料中的所有图片 - 将 BASE64 转存到 MediaAsset 表
+    /// </summary>
+    public async Task ProcessProfileImagesAsync(Guid userId, UserProfile profile)
+    {
+        // 1. 处理头像（如果是BASE64图片）
+        if (!string.IsNullOrEmpty(profile.Avatar) && IsBase64Image(profile.Avatar))
+        {
+            var result = await SaveMediaAssetAsync(userId, "avatar", profile.Avatar);
+            if (result.success && result.assetId.HasValue)
+            {
+                profile.Avatar = $"{AssetRefPrefix}{result.assetId.Value}";
+            }
+        }
+
+        // 2. 处理背景图
+        if (!string.IsNullOrEmpty(profile.Background) && IsBase64Image(profile.Background))
+        {
+            var result = await SaveMediaAssetAsync(userId, "background", profile.Background);
+            if (result.success && result.assetId.HasValue)
+            {
+                profile.Background = $"{AssetRefPrefix}{result.assetId.Value}";
+            }
+        }
+
+        // 3. 处理联系方式中的二维码图片
+        for (int i = 0; i < profile.Contacts.Count; i++)
+        {
+            var contact = profile.Contacts[i];
+            if (!string.IsNullOrEmpty(contact.Value) && IsBase64Image(contact.Value))
+            {
+                var result = await SaveMediaAssetAsync(userId, $"contact_qr_{contact.Type}", contact.Value);
+                if (result.success && result.assetId.HasValue)
+                {
+                    profile.Contacts[i].Value = $"{AssetRefPrefix}{result.assetId.Value}";
+                }
+            }
+        }
+
+        // 4. 处理项目Logo
+        for (int i = 0; i < profile.Projects.Count; i++)
+        {
+            var project = profile.Projects[i];
+            if (!string.IsNullOrEmpty(project.Logo) && IsBase64Image(project.Logo))
+            {
+                var result = await SaveMediaAssetAsync(userId, "project_logo", project.Logo);
+                if (result.success && result.assetId.HasValue)
+                {
+                    profile.Projects[i].Logo = $"{AssetRefPrefix}{result.assetId.Value}";
+                }
+            }
+        }
+
+        // 5. 处理相册图片
+        for (int i = 0; i < profile.Gallery.Count; i++)
+        {
+            var item = profile.Gallery[i];
+            if (!string.IsNullOrEmpty(item.Image) && IsBase64Image(item.Image))
+            {
+                var result = await SaveMediaAssetAsync(userId, "gallery", item.Image);
+                if (result.success && result.assetId.HasValue)
+                {
+                    profile.Gallery[i].Image = $"{AssetRefPrefix}{result.assetId.Value}";
+                }
+            }
+        }
+
+        // 6. 处理工作经历Logo（必须是图片）
+        for (int i = 0; i < profile.WorkExperiences.Count; i++)
+        {
+            var work = profile.WorkExperiences[i];
+            if (!string.IsNullOrEmpty(work.Logo))
+            {
+                // Logo 字段必须是图片格式
+                if (!IsBase64Image(work.Logo))
+                {
+                    throw new ArgumentException($"Work experience logo must be a valid image format");
+                }
+                
+                var result = await SaveMediaAssetAsync(userId, "work_logo", work.Logo);
+                if (result.success && result.assetId.HasValue)
+                {
+                    profile.WorkExperiences[i].Logo = $"{AssetRefPrefix}{result.assetId.Value}";
+                }
+            }
+        }
+
+        // 7. 处理教育经历Logo（必须是图片）
+        for (int i = 0; i < profile.SchoolExperiences.Count; i++)
+        {
+            var edu = profile.SchoolExperiences[i];
+            if (!string.IsNullOrEmpty(edu.Logo))
+            {
+                // Logo 字段必须是图片格式
+                if (!IsBase64Image(edu.Logo))
+                {
+                    throw new ArgumentException($"School experience logo must be a valid image format");
+                }
+                
+                var result = await SaveMediaAssetAsync(userId, "school_logo", edu.Logo);
+                if (result.success && result.assetId.HasValue)
+                {
+                    profile.SchoolExperiences[i].Logo = $"{AssetRefPrefix}{result.assetId.Value}";
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 还原用户资料中的所有图片引用 - 将 "asset:{GUID}" 还原为 BASE64
+    /// </summary>
+    public async Task RestoreProfileImagesAsync(UserProfile profile)
+    {
+        // 1. 还原头像
+        if (!string.IsNullOrEmpty(profile.Avatar) && IsAssetReference(profile.Avatar))
+        {
+            var data = await GetMediaAssetDataAsync(ExtractAssetId(profile.Avatar));
+            if (data != null)
+            {
+                profile.Avatar = data;
+            }
+        }
+
+        // 2. 还原背景图
+        if (!string.IsNullOrEmpty(profile.Background) && IsAssetReference(profile.Background))
+        {
+            var data = await GetMediaAssetDataAsync(ExtractAssetId(profile.Background));
+            if (data != null)
+            {
+                profile.Background = data;
+            }
+        }
+
+        // 3. 还原联系方式二维码
+        for (int i = 0; i < profile.Contacts.Count; i++)
+        {
+            var contact = profile.Contacts[i];
+            if (!string.IsNullOrEmpty(contact.Value) && IsAssetReference(contact.Value))
+            {
+                var data = await GetMediaAssetDataAsync(ExtractAssetId(contact.Value));
+                if (data != null)
+                {
+                    profile.Contacts[i].Value = data;
+                }
+            }
+        }
+
+        // 4. 还原项目Logo
+        for (int i = 0; i < profile.Projects.Count; i++)
+        {
+            var project = profile.Projects[i];
+            if (!string.IsNullOrEmpty(project.Logo) && IsAssetReference(project.Logo))
+            {
+                var data = await GetMediaAssetDataAsync(ExtractAssetId(project.Logo));
+                if (data != null)
+                {
+                    profile.Projects[i].Logo = data;
+                }
+            }
+        }
+
+        // 5. 还原相册图片
+        for (int i = 0; i < profile.Gallery.Count; i++)
+        {
+            var item = profile.Gallery[i];
+            if (!string.IsNullOrEmpty(item.Image) && IsAssetReference(item.Image))
+            {
+                var data = await GetMediaAssetDataAsync(ExtractAssetId(item.Image));
+                if (data != null)
+                {
+                    profile.Gallery[i].Image = data;
+                }
+            }
+        }
+
+        // 6. 还原工作经历Logo
+        for (int i = 0; i < profile.WorkExperiences.Count; i++)
+        {
+            var work = profile.WorkExperiences[i];
+            if (!string.IsNullOrEmpty(work.Logo) && IsAssetReference(work.Logo))
+            {
+                var data = await GetMediaAssetDataAsync(ExtractAssetId(work.Logo));
+                if (data != null)
+                {
+                    profile.WorkExperiences[i].Logo = data;
+                }
+            }
+        }
+
+        // 7. 还原教育经历Logo
+        for (int i = 0; i < profile.SchoolExperiences.Count; i++)
+        {
+            var edu = profile.SchoolExperiences[i];
+            if (!string.IsNullOrEmpty(edu.Logo) && IsAssetReference(edu.Logo))
+            {
+                var data = await GetMediaAssetDataAsync(ExtractAssetId(edu.Logo));
+                if (data != null)
+                {
+                    profile.SchoolExperiences[i].Logo = data;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -181,6 +388,39 @@ public class MediaAssetService
             : (0, 0);
     }
 
+    #region Utilities
+
+    /// <summary>
+    /// 判断字符串是否为 BASE64 图片
+    /// </summary>
+    private static bool IsBase64Image(string data)
+    {
+        if (string.IsNullOrEmpty(data))
+            return false;
+
+        return data.StartsWith("data:image/") && data.Contains("base64,");
+    }
+
+    /// <summary>
+    /// 判断字符串是否为资产引用格式 "asset:{GUID}"
+    /// </summary>
+    private static bool IsAssetReference(string data)
+    {
+        if (string.IsNullOrEmpty(data))
+            return false;
+
+        return data.StartsWith(AssetRefPrefix) && 
+               Guid.TryParse(data.Substring(AssetRefPrefix.Length), out _);
+    }
+
+    /// <summary>
+    /// 从资产引用中提取 GUID
+    /// </summary>
+    private static Guid ExtractAssetId(string assetRef)
+    {
+        return Guid.Parse(assetRef.Substring(AssetRefPrefix.Length));
+    }
+
     /// <summary>
     /// 验证是否为有效的 BASE64 图片
     /// </summary>
@@ -216,4 +456,6 @@ public class MediaAssetService
 
         return (mimeType, data);
     }
+
+    #endregion
 }

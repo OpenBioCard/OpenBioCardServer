@@ -44,7 +44,7 @@ public class User
     public List<ProjectItem> Projects { get; set; } = new();
     public List<GalleryItem> Gallery { get; set; } = new();
     public List<WorkExperience> WorkExperiences { get; set; } = new();
-    public List<SchoolExperiences> Educations { get; set; } = new();
+    public List<SchoolExperiences> SchoolExperiences { get; set; } = new();
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

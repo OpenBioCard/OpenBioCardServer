@@ -40,7 +40,7 @@ public static class UserMapper
             Gallery = profile.Gallery,
             
             WorkExperiences = profile.WorkExperiences,
-            Educations = profile.Educations
+            SchoolExperiences = profile.SchoolExperiences
         };
     }
 
@@ -68,7 +68,7 @@ public static class UserMapper
         profile.Gallery = dto.Gallery;
         
         profile.WorkExperiences = dto.WorkExperiences;
-        profile.Educations = dto.Educations;
+        profile.SchoolExperiences = dto.SchoolExperiences;
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public static class UserMapper
             Gallery = dto.Gallery,
             
             WorkExperiences = dto.WorkExperiences,
-            Educations = dto.Educations
+            SchoolExperiences = dto.SchoolExperiences
         };
     }
 }
