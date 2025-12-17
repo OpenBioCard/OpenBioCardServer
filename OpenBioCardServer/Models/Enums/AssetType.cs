@@ -5,4 +5,5 @@ public enum AssetType
     Text,
     Image,
     Remote,
+    Style, // For web CSS classes only (etc. fontawesome icons, devicons...)
 }
