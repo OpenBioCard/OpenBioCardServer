@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OpenBioCardServer.Data;
-using OpenBioCardServer.Models;
+using OpenBioCardServer.Models.Entities;
 using OpenBioCardServer.Utilities;
 
 namespace OpenBioCardServer.Services;
@@ -19,7 +19,7 @@ public class AdminService
     /// </summary>
     public async Task<List<object>> GetAllUsersAsync()
     {
-        return await _context.Users
+        return await _context.UserAccounts
             .Select(u => new 
             { 
                 username = u.Username, 
@@ -48,14 +48,14 @@ public class AdminService
             return (false, null, "Invalid user type");
         }
 
-        if (await _context.Users.AnyAsync(u => u.Username == newUsername))
+        if (await _context.UserAccounts.AnyAsync(u => u.Username == newUsername))
         {
             return (false, null, "Username already exists");
         }
 
         var (hash, salt) = PasswordHasher.HashPassword(password);
 
-        var user = new User
+        var account = new UserAccount
         {
             Username = newUsername,
             PasswordHash = hash,
@@ -64,10 +64,17 @@ public class AdminService
             Token = Guid.NewGuid().ToString()
         };
 
-        _context.Users.Add(user);
+        var profile = new UserProfile
+        {
+            UserId = account.Id,
+            Name = newUsername
+        };
+
+        _context.UserAccounts.Add(account);
+        _context.UserProfiles.Add(profile);
         await _context.SaveChangesAsync();
 
-        return (true, user.Token, null);
+        return (true, account.Token, null);
     }
 
     /// <summary>
@@ -82,19 +89,21 @@ public class AdminService
             return (false, "Cannot delete yourself");
         }
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == usernameToDelete);
-        if (user == null)
+        var account = await _context.UserAccounts
+            .FirstOrDefaultAsync(u => u.Username == usernameToDelete);
+            
+        if (account == null)
         {
             return (false, "User not found");
         }
 
         // 不允许删除 root 用户
-        if (user.Type == "root")
+        if (account.Type == "root")
         {
             return (false, "Cannot delete root user");
         }
 
-        _context.Users.Remove(user);
+        _context.UserAccounts.Remove(account);
         await _context.SaveChangesAsync();
 
         return (true, null);

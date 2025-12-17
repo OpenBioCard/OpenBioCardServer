@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OpenBioCardServer.Data;
-using OpenBioCardServer.Models;
+using OpenBioCardServer.Models.Entities;
 using OpenBioCardServer.Utilities;
 
 namespace OpenBioCardServer.Services;
@@ -32,30 +32,38 @@ public class SystemService
 
         if (string.IsNullOrEmpty(rootPassword))
         {
-            _logger.LogWarning("Root password not configured in appsettings. Please set AuthSettings:RootPassword");
+            _logger.LogWarning("Root password not configured. Please set AuthSettings:RootPassword");
             return;
         }
 
         // 查找 root 用户
-        var rootUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == rootUsername);
+        var rootAccount = await _context.UserAccounts
+            .Include(a => a.Profile)
+            .FirstOrDefaultAsync(u => u.Username == rootUsername);
 
         // 生成新的密码哈希
         var (hash, salt) = PasswordHasher.HashPassword(rootPassword);
 
-        if (rootUser == null)
+        if (rootAccount == null)
         {
             // Root 用户不存在，创建
-            rootUser = new User
+            rootAccount = new UserAccount
             {
                 Username = rootUsername,
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 Type = "root",
-                Name = "Root Administrator",
                 Token = $"root-{Guid.NewGuid()}"
             };
 
-            _context.Users.Add(rootUser);
+            var rootProfile = new UserProfile
+            {
+                UserId = rootAccount.Id,
+                Name = "Root Administrator"
+            };
+
+            _context.UserAccounts.Add(rootAccount);
+            _context.UserProfiles.Add(rootProfile);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Root user created: {Username}", rootUsername);
@@ -63,9 +71,9 @@ public class SystemService
         else
         {
             // Root 用户已存在，更新密码
-            rootUser.PasswordHash = hash;
-            rootUser.PasswordSalt = salt;
-            rootUser.Type = "root";
+            rootAccount.PasswordHash = hash;
+            rootAccount.PasswordSalt = salt;
+            rootAccount.Type = "root";
 
             await _context.SaveChangesAsync();
 
