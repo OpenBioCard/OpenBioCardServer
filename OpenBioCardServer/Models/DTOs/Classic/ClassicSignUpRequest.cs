@@ -1,0 +1,15 @@
+using Newtonsoft.Json;
+
+namespace OpenBioCardServer.Models.DTOs.Classic;
+
+public class ClassicSignUpRequest
+{
+    [JsonProperty("username")]
+    public string UserName { get; set; } = string.Empty;
+    
+    [JsonProperty("password")]
+    public string Password { get; set; } = string.Empty;
+    
+    [JsonProperty("type")]
+    public string Type { get; set; } = string.Empty; // "user" or "admin"
+}
