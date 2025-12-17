@@ -52,13 +52,13 @@ public class Program
         builder.Services.AddControllers()
             .AddNewtonsoftJson(options =>
             {
-                options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+                options.SerializerSettings.ReferenceLoopHandling = 
+                    Newtonsoft.Json.ReferenceLoopHandling.Ignore;
             });
             
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddOpenApi(); 
         
-        // 注册服务
         builder.Services.AddScoped<AuthService>();
         builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<AdminService>();
@@ -66,18 +66,25 @@ public class Program
 
         var app = builder.Build();
 
-        // 启动时初始化 Root 用户
         using (var scope = app.Services.CreateScope())
         {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var systemService = scope.ServiceProvider.GetRequiredService<SystemService>();
+
             try
             {
+                // await context.Database.MigrateAsync();
+                await context.Database.EnsureCreatedAsync();
+                
                 await systemService.EnsureRootUserAsync();
+                
+                logger.LogInformation("==> Initialization completed successfully.");
             }
             catch (Exception ex)
             {
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Failed to initialize root user");
+                logger.LogError(ex, "CRITICAL ERROR during database initialization");
+                throw;
             }
         }
 

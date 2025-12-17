@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace OpenBioCardServer.Models;
@@ -16,14 +15,15 @@ public class User
     [JsonIgnore]
     public string PasswordHash { get; set; } = string.Empty;
     
-    // 密码盐值
+    [JsonIgnore]
     public string PasswordSalt { get; set; } = string.Empty;
 
+    [JsonIgnore]
     public string Token { get; set; } = Guid.NewGuid().ToString();
 
-    // user, admin, root
     public string Type { get; set; } = "user"; 
 
+    // Basic profile fields
     public string Name { get; set; } = string.Empty;
     public string? Pronouns { get; set; }
     public string? Avatar { get; set; }
@@ -32,6 +32,12 @@ public class User
     public string? Website { get; set; }
     public string? Background { get; set; }
 
+    public string? CurrentCompany { get; set; }
+    public string? CurrentCompanyLink { get; set; }
+    public string? CurrentSchool { get; set; }
+    public string? CurrentSchoolLink { get; set; }
+
+    // Collections
     public List<ContactItem> Contacts { get; set; } = new();
     public List<SocialLinkItem> SocialLinks { get; set; } = new();
     public List<ProjectItem> Projects { get; set; } = new();
