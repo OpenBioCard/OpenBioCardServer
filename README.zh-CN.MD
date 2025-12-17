@@ -82,6 +82,7 @@
 | `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | 系统管理员用户名。 |
 | `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **必填**。系统管理员密码。 |
 | `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | 允许的前端域名列表（逗号分隔）。 |
+| `AppSettings::Version` | `AppSettings__Version` | `/check-backend` 返回给前端的服务器版本名称。 |
 
 ## 🏗️ 部署指南
 

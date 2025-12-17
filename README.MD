@@ -81,6 +81,7 @@ Configuration is managed via `appsettings.json` or environment variables.
 | `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | System admin username. |
 | `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **Required**. System admin password. |
 | `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | List of allowed frontend domains (comma-separated). |
+| `AppSettings::Version` | `AppSettings__Version` | Server version name returned to the frontend by `/check-backend`. |
 
 ## 🏗️ Deployment Guide
 
