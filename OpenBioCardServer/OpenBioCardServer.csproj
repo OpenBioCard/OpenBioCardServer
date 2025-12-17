@@ -26,6 +26,8 @@
     <ItemGroup>
       <Folder Include="Controllers\" />
       <Folder Include="Middlewares\" />
+      <Folder Include="Models\DTOs\" />
+      <Folder Include="Models\Entities\" />
       <Folder Include="Services\" />
     </ItemGroup>
 

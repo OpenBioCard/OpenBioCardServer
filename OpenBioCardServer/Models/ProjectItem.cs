@@ -1,8 +1,9 @@
 namespace OpenBioCardServer.Models;
 
-public class ProjectItem {
+public class ProjectItem
+{
     public string Name { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public string? Logo { get; set; }
+    public string? Url { get; set; }
+    public string? Description { get; set; }
+    public Asset? Logo { get; set; }
 }
