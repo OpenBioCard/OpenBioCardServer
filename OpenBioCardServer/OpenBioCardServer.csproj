@@ -24,7 +24,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Controllers\" />
       <Folder Include="Middlewares\" />
+      <Folder Include="Services\" />
     </ItemGroup>
 
 </Project>

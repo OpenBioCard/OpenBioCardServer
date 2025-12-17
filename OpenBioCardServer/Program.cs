@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OpenBioCardServer.Configuration;
 using OpenBioCardServer.Data;
-using OpenBioCardServer.Services;
 
 namespace OpenBioCardServer;
 
@@ -69,11 +68,7 @@ public class Program
         builder.Services.AddSingleton<IValidateOptions<AssetSettings>, AssetSettingsValidator>();
         
         // Services
-        builder.Services.AddScoped<AuthService>();
-        builder.Services.AddScoped<UserService>();
-        builder.Services.AddScoped<AdminService>();
-        builder.Services.AddScoped<SystemService>();
-        builder.Services.AddScoped<MediaAssetService>();
+        // builder.Services.AddScoped<...>();
 
         var app = builder.Build();
 
@@ -81,14 +76,11 @@ public class Program
         {
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var systemService = scope.ServiceProvider.GetRequiredService<SystemService>();
 
             try
             {
                 // 注意：生产环境应该使用迁移而不是 EnsureCreated
                 await context.Database.EnsureCreatedAsync();
-                
-                await systemService.EnsureRootUserAsync();
                 
                 logger.LogInformation("==> Initialization completed successfully.");
             }
