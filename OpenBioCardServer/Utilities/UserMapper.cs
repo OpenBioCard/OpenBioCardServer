@@ -37,7 +37,10 @@ public static class UserMapper
             Contacts = profile.Contacts,
             SocialLinks = profile.SocialLinks,
             Projects = profile.Projects,
-            Gallery = profile.Gallery
+            Gallery = profile.Gallery,
+            
+            WorkExperiences = profile.WorkExperiences,
+            Educations = profile.Educations
         };
     }
 
@@ -63,6 +66,9 @@ public static class UserMapper
         profile.SocialLinks = dto.SocialLinks;
         profile.Projects = dto.Projects;
         profile.Gallery = dto.Gallery;
+        
+        profile.WorkExperiences = dto.WorkExperiences;
+        profile.Educations = dto.Educations;
     }
 
     /// <summary>
@@ -89,7 +95,10 @@ public static class UserMapper
             Contacts = dto.Contacts,
             SocialLinks = dto.SocialLinks,
             Projects = dto.Projects,
-            Gallery = dto.Gallery
+            Gallery = dto.Gallery,
+            
+            WorkExperiences = dto.WorkExperiences,
+            Educations = dto.Educations
         };
     }
 }

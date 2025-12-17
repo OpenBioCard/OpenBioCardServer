@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using OpenBioCardServer.Configuration;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Services;
 
@@ -59,10 +61,19 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddOpenApi(); 
         
+        // Configuration
+        builder.Services.Configure<AssetSettings>(
+            builder.Configuration.GetSection("AssetSettings"));
+        
+        // Configuration Validator
+        builder.Services.AddSingleton<IValidateOptions<AssetSettings>, AssetSettingsValidator>();
+        
+        // Services
         builder.Services.AddScoped<AuthService>();
         builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<AdminService>();
         builder.Services.AddScoped<SystemService>();
+        builder.Services.AddScoped<MediaAssetService>();
 
         var app = builder.Build();
 
@@ -74,7 +85,7 @@ public class Program
 
             try
             {
-                // await context.Database.MigrateAsync();
+                // 注意：生产环境应该使用迁移而不是 EnsureCreated
                 await context.Database.EnsureCreatedAsync();
                 
                 await systemService.EnsureRootUserAsync();

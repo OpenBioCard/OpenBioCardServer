@@ -27,7 +27,9 @@ public class UserAccount
     public string Type { get; set; } = "user"; // user, admin, root
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastLogin { get; set; }
 
-    // 导航属性 - 一对一关系
+    // 导航属性
     public UserProfile Profile { get; set; } = null!;
+    public List<MediaAsset> MediaAssets { get; set; } = new();
 }

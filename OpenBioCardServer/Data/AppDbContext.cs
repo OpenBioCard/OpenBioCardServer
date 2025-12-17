@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<UserAccount> UserAccounts { get; set; }
     public DbSet<UserProfile> UserProfiles { get; set; }
+    public DbSet<MediaAsset> MediaAssets { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,10 +21,16 @@ public class AppDbContext : DbContext
             entity.ToTable("UserAccounts");
             entity.HasIndex(u => u.Username).IsUnique();
             
-            // 一对一关系配置
+            // 一对一关系：Account <-> Profile
             entity.HasOne(a => a.Profile)
                 .WithOne(p => p.Account)
                 .HasForeignKey<UserProfile>(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // 一对多关系：Account -> MediaAssets
+            entity.HasMany(a => a.MediaAssets)
+                .WithOne(m => m.User)
+                .HasForeignKey(m => m.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -44,6 +51,18 @@ public class AppDbContext : DbContext
             
             entity.OwnsMany(p => p.Projects, b => b.ToJson());
             entity.OwnsMany(p => p.Gallery, b => b.ToJson());
+            
+            entity.OwnsMany(p => p.WorkExperiences, b => b.ToJson());
+            entity.OwnsMany(p => p.Educations, b => b.ToJson());
+        });
+
+        // 配置 MediaAsset
+        modelBuilder.Entity<MediaAsset>(entity =>
+        {
+            entity.ToTable("MediaAssets");
+            entity.HasIndex(m => m.UserId);
+            entity.HasIndex(m => m.Type);
+            entity.HasIndex(m => m.CreatedAt);
         });
     }
 }

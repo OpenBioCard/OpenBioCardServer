@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using OpenBioCardServer.Models.Entities;
 
 namespace OpenBioCardServer.Models;
 
@@ -23,7 +24,7 @@ public class User
 
     public string Type { get; set; } = "user"; 
 
-    // Basic profile fields
+    // 基础资料
     public string Name { get; set; } = string.Empty;
     public string? Pronouns { get; set; }
     public string? Avatar { get; set; }
@@ -37,11 +38,13 @@ public class User
     public string? CurrentSchool { get; set; }
     public string? CurrentSchoolLink { get; set; }
 
-    // Collections
+    // 集合
     public List<ContactItem> Contacts { get; set; } = new();
     public List<SocialLinkItem> SocialLinks { get; set; } = new();
     public List<ProjectItem> Projects { get; set; } = new();
     public List<GalleryItem> Gallery { get; set; } = new();
+    public List<WorkExperience> WorkExperiences { get; set; } = new();
+    public List<SchoolExperiences> Educations { get; set; } = new();
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
