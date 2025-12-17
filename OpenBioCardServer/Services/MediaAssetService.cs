@@ -387,6 +387,106 @@ public class MediaAssetService
             ? (stats.TotalBytes, stats.FileCount) 
             : (0, 0);
     }
+    
+    #region Profile Asset Management
+
+    /// <summary>
+    /// 从 UserProfile 中提取所有资产引用（asset:{GUID}）
+    /// </summary>
+    public List<Guid> ExtractAllAssetReferences(UserProfile profile)
+    {
+        var assetIds = new List<Guid>();
+
+        // 1. 头像
+        if (!string.IsNullOrEmpty(profile.Avatar) && IsAssetReference(profile.Avatar))
+        {
+            assetIds.Add(ExtractAssetId(profile.Avatar));
+        }
+
+        // 2. 背景图
+        if (!string.IsNullOrEmpty(profile.Background) && IsAssetReference(profile.Background))
+        {
+            assetIds.Add(ExtractAssetId(profile.Background));
+        }
+
+        // 3. 联系方式二维码
+        foreach (var contact in profile.Contacts)
+        {
+            if (!string.IsNullOrEmpty(contact.Value) && IsAssetReference(contact.Value))
+            {
+                assetIds.Add(ExtractAssetId(contact.Value));
+            }
+        }
+
+        // 4. 项目Logo
+        foreach (var project in profile.Projects)
+        {
+            if (!string.IsNullOrEmpty(project.Logo) && IsAssetReference(project.Logo))
+            {
+                assetIds.Add(ExtractAssetId(project.Logo));
+            }
+        }
+
+        // 5. 相册图片
+        foreach (var item in profile.Gallery)
+        {
+            if (!string.IsNullOrEmpty(item.Image) && IsAssetReference(item.Image))
+            {
+                assetIds.Add(ExtractAssetId(item.Image));
+            }
+        }
+
+        // 6. 工作经历Logo
+        foreach (var work in profile.WorkExperiences)
+        {
+            if (!string.IsNullOrEmpty(work.Logo) && IsAssetReference(work.Logo))
+            {
+                assetIds.Add(ExtractAssetId(work.Logo));
+            }
+        }
+
+        // 7. 教育经历Logo
+        foreach (var edu in profile.SchoolExperiences)
+        {
+            if (!string.IsNullOrEmpty(edu.Logo) && IsAssetReference(edu.Logo))
+            {
+                assetIds.Add(ExtractAssetId(edu.Logo));
+            }
+        }
+
+        return assetIds;
+    }
+
+    /// <summary>
+    /// 删除指定的媒体资源（不自动保存更改，由调用者统一保存）
+    /// </summary>
+    public async Task<bool> DeleteMediaAssetAsync(Guid assetId)
+    {
+        try
+        {
+            var asset = await _context.MediaAssets.FindAsync(assetId);
+            if (asset != null)
+            {
+                _context.MediaAssets.Remove(asset);
+                
+                _logger.LogInformation(
+                    "Marked media asset for deletion: AssetId={AssetId}, UserId={UserId}, Type={Type}", 
+                    assetId, asset.UserId, asset.Type);
+                
+                return true;
+            }
+            
+            _logger.LogWarning("Media asset not found: AssetId={AssetId}", assetId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete media asset: AssetId={AssetId}", assetId);
+            return false;
+        }
+    }
+
+    #endregion
 
     #region Utilities
 
