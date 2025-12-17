@@ -84,8 +84,8 @@ public class Program
 
             try
             {
+                await context.Database.EnsureCreatedAsync();
                 await context.Database.MigrateAsync();
-                // await context.Database.EnsureCreatedAsync();
                 
                 logger.LogInformation("==> Initialization completed successfully.");
             }
