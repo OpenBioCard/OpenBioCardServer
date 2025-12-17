@@ -1,365 +1,702 @@
-# OBCS (OpenBioCard Server) API Documentation
-
-**Data Format**: `application/json`
+# OBCS API Documentation
 
 ## Table of Contents
+- [Authentication and Authorization](#authentication-and-authorization)
+- [Profile Management](#profile-management)
+- [Admin Operations](#admin-operations)
+- [Data Structures](#data-structures)
 
-1. [General Information](#1-general-information)
-2. [Classic Authentication Endpoints](#2-classic-authentication-endpoints)
-3. [Classic User Endpoints](#3-classic-user-endpoints)
-4. [Classic Administrator Endpoints](#4-classic-administrator-endpoints)
-5. [Classic Data Model Reference](#5-classic-data-model-reference)
-
----
-
-## 1. General Information
-
-### Naming Convention
-- **Classic Endpoints** (`/classic/...`):
-  - JSON request and response fields use **lower camelCase** (e.g., `userName` -> `username`).
-- **Other Endpoints** (if any):
-  - Default to **PascalCase** (e.g., `UserName`), unless otherwise specified.
-
-### Authentication Methods
-- **Header Method**: Include `Authorization: Bearer <your_token>` in the HTTP request header.
-- **Body Method**: Some Classic endpoints (e.g., account deletion, admin operations) require a `token` field in the JSON request body.
-
-### Error Handling
-- **200 OK**: Request succeeded.
-- **400 Bad Request**: Invalid request parameters or validation failure.
-- **401 Unauthorized**: Invalid, expired token or username mismatch.
-- **403 Forbidden**: Insufficient permissions (e.g., non-admin attempting admin actions, or blocked by firewall).
-- **404 Not Found**: Resource (user or profile) does not exist.
-- **409 Conflict**: Resource conflict (e.g., username already exists).
-- **429 Too Many Requests**: Rate limit exceeded.
-- **500 Internal Server Error**: Internal server error.
-
----
-
-## 2. Classic Authentication Endpoints
-
-### Initialize Admin (First Installation)
-If no users exist in the system, this endpoint creates a default admin account.
-
-- **Endpoint**: `GET /classic/init-admin`
-- **Permission**: Public (only valid when no users exist)
-
-**Response**: `Admin initialized` or `Admin already initialized`
-
----
+## Authentication and Authorization
 
 ### User Registration
-Register a new regular user or admin account.
+```http
+POST /api/auth/signup
+Content-Type: application/json
+```
 
-- **Endpoint**: `POST /classic/signup/create`
-- **Permission**: Public
-
-**Request Parameters**:
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| username | string | Yes | Username (unique) |
-| password | string | Yes | Password |
-| type | string | Yes | User type: `user` or `admin`. **Cannot register root**. |
-
-**Request Example**:
+**Request Body**:
 ```json
 {
-    "username": "newuser",
-    "password": "secretpassword",
-    "type": "user"
+    "Username": "string", // Required, unique
+    "Password": "string", // Required
+    "UserType": "string" // Required, values: "user" or "admin"
 }
 ```
 
-**Response Example**:
+**Response**:
 ```json
 {
-    "token": "guid-token-string..."
+    "Token": "string"
 }
 ```
+
+**Status Codes**:
+- 200: Registration successful
+- 400: Invalid request parameters
+- 409: Username already exists
+- 403: Attempt to create root user
 
 ### User Login
-- **Endpoint**: `POST /classic/signin`
-- **Permission**: Public
+```http
+POST /api/auth/signin
+Content-Type: application/json
+```
 
-**Request Parameters**:
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| username | string | Yes | Username |
-| password | string | Yes | Password |
-
-**Response Example**:
+**Request Body**:
 ```json
 {
-    "token": "guid-token-string..."
+    "Username": "string", // Required
+    "Password": "string" // Required
 }
 ```
 
-### Delete Account (Deactivation)
-Delete the current user's account.
+**Response**: Same as registration endpoint
 
-- **Endpoint**: `POST /classic/delete`
-- **Permission**: Token required
+**Status Codes**:
+- 200: Login successful
+- 401: Invalid username or password
 
-**Request Parameters**:
+### Delete Account
+```http
+POST /api/auth/delete
+Authorization: Bearer <token>
+Content-Type: application/json
+```
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| username | string | Yes | Username to delete |
-| token | string | Yes | Current user's Token |
-
-**Response Example**:
+**Request Body**:
 ```json
 {
-    "message": "Account deleted successfully"
+    "Username": "string" // Required
 }
 ```
 
----
+**Status Codes**:
+- 200: Deletion successful
+- 401: Token invalid or mismatched
+- 403: Cannot delete root account
 
-## 3. Classic User Endpoints
-
-### Get User Profile
-Retrieve public profile information of a specified user.
-
-- **Endpoint**: `GET /classic/user/{username}`
-- **Permission**: Public
-
-**Response Example**:
-See [Data Model Reference - User Profile](#5-classic-data-model-reference)
-
-### Update User Profile
-Update the current user's profile. This operation fully replaces list-type data (e.g., contacts, experiences).
-
-- **Endpoint**: `POST /classic/user/{username}`
-- **Permission**: Authentication required (Header)
-- **Header**: `Authorization: Bearer <token>`
-
-**Request Parameters**:
-Request body must be a complete `ClassicProfile` object structure.
-
-**Request Example**:
-```json
-{
-    "username": "johndoe",
-    "name": "John Doe Updated",
-    "bio": "New Bio Content",
-    "location": "New York",
-    "workExperiences": [
-        {
-            "company": "Tech Corp",
-            "position": "Senior Dev",
-            "startDate": "2020-01-01"
-        }
-    ],
-    "contacts": [
-        { "type": "email", "value": "john@example.com" }
-    ]
-}
+### User Logout
+```http
+POST /api/auth/logout
+Authorization: Bearer <token>
 ```
 
-**Response Example**:
+**Status Codes**:
+- 200: Logout successful
+- 401: Token invalid
+
+## Profile Management
+
+### Retrieve Public Profile
+```http
+GET /api/profile/{username}
+```
+
+**Response**: ProfileDto object
+
+**Status Codes**:
+- 200: Success
+- 404: User does not exist
+
+### Update Profile
+```http
+PUT /api/profile/{username}
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body**: ProfileDto object
+
+**Response**:
 ```json
 {
     "success": true
 }
 ```
 
----
+**Status Codes**:
+- 200: Success
+- 401: Token invalid or mismatched
+- 404: User does not exist
 
-## 4. Classic Administrator Endpoints
-
-**Note**: All admin endpoints verify whether the requesting user has `admin` or `root` privileges.
-
-### Check Admin Permission
-Verify if the current token has admin permissions.
-
-- **Endpoint**: `POST /classic/admin/check-permission`
-
-**Request Parameters**:
-```json
-{
-    "username": "admin_user",
-    "token": "admin_token..."
-}
+### Retrieve Private Profile
+```http
+GET /api/profile/me
+Authorization: Bearer <token>
 ```
 
-**Response Example**:
+**Response**: ProfileDto object
+
+**Status Codes**:
+- 200: Success
+- 401: Token invalid
+- 404: Profile does not exist
+
+## Admin Operations
+
+### Check Admin Permission
+```http
+GET /api/admin/permission
+Authorization: Bearer <token>
+```
+
+**Response**:
 ```json
 {
     "success": true,
-    "type": "admin"
+    "type": "string" // "admin" or "root"
 }
 ```
 
-### Get User List (POST method)
-- **Endpoint**: `POST /classic/admin/users/list`
+**Status Codes**:
+- 200: Success
+- 401: Token invalid
+- 403: Insufficient permission
 
-**Request Parameters**:
-```json
-{
-    "username": "admin_user",
-    "token": "admin_token..."
-}
+### Retrieve User List
+```http
+GET /api/admin/users
+Authorization: Bearer <token>
 ```
 
-**Response Example**:
+**Response**:
 ```json
 {
-    "users": [
-        { "username": "user1", "type": "user" },
-        { "username": "admin1", "type": "admin" }
+    "Users": [
+        {
+            "Username": "string",
+            "Type": "string"
+        }
     ]
 }
 ```
 
-### Get User List (GET method)
-- **Endpoint**: `GET /classic/admin/users`
-- **Note**: Although it's a GET request, current implementation still requires passing JSON parameters in the body, or providing Token in the header.
+**Status Codes**:
+- 200: Success
+- 401: Token invalid
+- 403: Insufficient permission
 
-**Request Parameters (Body)**:
-```json
-{
-    "username": "admin_user",
-    "token": "admin_token..." 
-}
+### Create User (Admin)
+
+```http
+POST /api/admin/users
+Authorization: Bearer <token>
+Content-Type: application/json
 ```
-*Note: If Authorization Token is provided in the header, the token in the body can be omitted, but username must still match.*
 
-### Create User (Admin operation)
-Admin creates a new user directly, bypassing the registration process.
-
-- **Endpoint**: `POST /classic/admin/users`
-
-**Request Parameters**:
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| username | string | Yes | Admin's username |
-| token | string | Yes | Admin's Token |
-| newUsername | string | Yes | New user's username |
-| password | string | Yes | New user's password |
-| type | string | Yes | `user` or `admin` |
-
-**Response Example**:
+**Request Body**:
 ```json
 {
-    "message": "User created",
-    "token": "new-user-token..."
+    "NewUsername": "string", // Required
+    "Password": "string", // Required
+    "Type": "string" // Required, values: "user" or "admin"
 }
 ```
 
-### Delete User (Admin operation)
-Admin deletes a specified user.
-
-- **Endpoint**: `DELETE /classic/admin/users/{targetUsername}`
-
-**Request Parameters (Body)**:
+**Response**:
 ```json
 {
-    "username": "admin_user",
-    "token": "admin_token..."
+    "Token": "string"
 }
 ```
 
-**Response Example**:
-```json
-{
-    "message": "User deleted"
-}
+**Status Codes**:
+- 200: Success
+- 400: Invalid request parameters
+- 401: Token invalid
+- 403: Insufficient permission
+- 409: Username already exists
+
+### Delete User (Admin)
+```http
+DELETE /api/admin/users/{username}
+Authorization: Bearer <token>
 ```
+
+**Status Codes**:
+- 200: Success
+- 400: Cannot delete own account
+- 401: Token invalid
+- 403: Insufficient permission or cannot delete root account
+- 404: User does not exist
 
 ---
 
-## 5. Classic Data Model Reference
+## Classic API (lower camelCase)
 
-All JSON object structures used in `/classic` endpoints are as follows:
+### Classic User Registration
+```http
+POST /classic/signup/create
+Content-Type: application/json
+```
 
-### User Profile
+**Request Body**:
+```json
+{
+    "userName": "string", // Required, unique
+    "password": "string", // Required
+    "type": "string" // Required, values: "user" or "admin"
+}
+```
+
+**Response**:
+```json
+{
+    "token": "string"
+}
+```
+
+### Classic User Login
+```http
+POST /classic/signin
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+    "userName": "string", // Required
+    "password": "string" // Required
+}
+```
+
+**Response**: Same as registration endpoint
+
+### Classic Delete Account
+```http
+POST /classic/delete
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+    "userName": "string", // Required
+    "token": "string" // Required
+}
+```
+
+**Response**:
+```json
+{
+    "message": "string"
+}
+```
+
+### Classic Retrieve User Profile
+```http
+GET /classic/user/{username}
+```
+
+**Response**: ClassicProfile object
+
+### Classic Update User Profile
+```http
+POST /classic/user/{username}
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**Request Body**: ClassicProfile object
+
+**Response**:
+```json
+{
+    "success": true
+}
+```
+
+### Classic Check Admin Permission
+```http
+POST /classic/admin/check-permission
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+    "userName": "string", // Required
+    "token": "string" // Required
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "type": "string" // "admin" or "root"
+}
+```
+
+### Classic Retrieve User List
+```http
+GET /classic/admin/users
+```
+
+**Note**: Token and username must be passed in Header or Body
+
+### Classic Create User (Admin)
+```http
+POST /classic/admin/users
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+    "userName": "string", // Admin username
+    "token": "string", // Admin token
+    "newUserName": "string", // New username
+    "password": "string", // New user password
+    "type": "string" // New user type, values: "user" or "admin"
+}
+```
+
+**Response**:
+```json
+{
+    "message": "string",
+    "token": "string" // Token for new user
+}
+```
+
+### Classic Delete User (Admin)
+```http
+DELETE /classic/admin/users/{targetUsername}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+    "userName": "string", // Admin username
+    "token": "string" // Admin token
+}
+```
+
+**Response**:
+```json
+{
+    "message": "string"
+}
+```
+
+### Classic Initialize Admin
+```http
+GET /classic/init-admin
+```
+
+**Response**: String "Admin initialized" or "Admin already initialized"
+
+---
+
+## Data Structures
+
+### SignUpRequest
+```json
+{
+    "Username": "string",
+    "Password": "string",
+    "UserType": "string"
+}
+```
+
+### SignInRequest
+```json
+{
+    "Username": "string",
+    "Password": "string"
+}
+```
+
+### DeleteRequest
+```json
+{
+    "Username": "string"
+}
+```
+
+### TokenResponse
+```json
+{
+    "Token": "string"
+}
+```
+
+### ProfileDto
+```json
+{
+    "Username": "string",
+    "Avatar": AssetDto,
+    "NickName": "string",
+    "Pronouns": "string",
+    "Description": "string",
+    "Location": "string",
+    "Website": "string",
+    "Background": AssetDto,
+    "CurrentCompany": "string",
+    "CurrentCompanyLink": "string",
+    "CurrentSchool": "string",
+    "CurrentSchoolLink": "string",
+    "Contacts": [ContactItemDto],
+    "SocialLinks": [SocialLinkItemDto],
+    "Projects": [ProjectItemDto],
+    "WorkExperiences": [WorkExperienceItemDto],
+    "SchoolExperiences": [SchoolExperienceItemDto],
+    "Gallery": [GalleryItemDto]
+}
+```
+
+### AssetDto
+```json
+{
+    "Type": "string", // "Text", "Image", "Remote", "Style"
+    "Text": "string",
+    "DataBase64": "string"
+}
+```
+
+### ContactItemDto
+```json
+{
+    "Type": "string",
+    "Text": "string",
+    "Image": AssetDto
+}
+```
+
+### SocialLinkItemDto
+```json
+{
+    "Type": "string",
+    "Value": "string",
+    "Attributes": {
+        "key": "value"
+    }
+}
+```
+
+### ProjectItemDto
+```json
+{
+    "Name": "string",
+    "Url": "string",
+    "Description": "string",
+    "Logo": AssetDto
+}
+```
+
+### WorkExperienceItemDto
+```json
+{
+    "Company": "string",
+    "CompanyUrl": "string",
+    "Position": "string",
+    "StartDate": "string", // yyyy-MM-dd
+    "EndDate": "string", // yyyy-MM-dd
+    "Description": "string",
+    "Logo": AssetDto
+}
+```
+
+### SchoolExperienceItemDto
+```json
+{
+    "School": "string",
+    "SchoolLink": "string",
+    "Degree": "string",
+    "Major": "string",
+    "StartDate": "string", // yyyy-MM-dd
+    "EndDate": "string", // yyyy-MM-dd
+    "Description": "string",
+    "Logo": AssetDto
+}
+```
+
+### GalleryItemDto
+```json
+{
+    "Image": AssetDto,
+    "Caption": "string"
+}
+```
+
+### CreateUserRequest
+```json
+{
+    "NewUsername": "string",
+    "Password": "string",
+    "Type": "string"
+}
+```
+
+### UserInfoDto
+```json
+{
+    "Username": "string",
+    "Type": "string"
+}
+```
+
+### UserListResponse
+```json
+{
+    "Users": [UserInfoDto]
+}
+```
+
+### Classic Compatibility Data Structures (lower camelCase)
+
+#### ClassicSignUpRequest
+```json
+{
+    "userName": "string",
+    "password": "string",
+    "type": "string"
+}
+```
+
+#### ClassicSignInRequest
+```json
+{
+    "userName": "string",
+    "password": "string"
+}
+```
+
+#### ClassicDeleteRequest
+```json
+{
+    "userName": "string",
+    "token": "string"
+}
+```
+
+#### ClassicTokenResponse
+```json
+{
+    "token": "string"
+}
+```
+
+#### ClassicProfile
 ```json
 {
     "username": "string",
     "name": "string",
     "pronouns": "string",
-    "avatar": "string (Base64 Data URI / URL / Text)",
+    "avatar": "string", // Base64 Data URI / URL / Text
     "bio": "string",
     "location": "string",
     "website": "string",
-    "background": "string",
+    "background": "string", // Base64 Data URI / URL / Text
     "currentCompany": "string",
     "currentCompanyLink": "string",
     "currentSchool": "string",
     "currentSchoolLink": "string",
-    "contacts": [ Contact ],
-    "socialLinks": [ SocialLink ],
-    "projects": [ Project ],
-    "workExperiences": [ WorkExperience ],
-    "schoolExperiences": [ SchoolExperience ],
-    "gallery": [ GalleryItem ]
+    "contacts": [ClassicContact],
+    "socialLinks": [ClassicSocialLink],
+    "projects": [ClassicProject],
+    "workExperiences": [ClassicWorkExperience],
+    "schoolExperiences": [ClassicSchoolExperience],
+    "gallery": [ClassicGalleryItem]
 }
 ```
 
-### Contact
+#### ClassicContact
 ```json
 {
     "type": "string",
-    "value": "string"
+    "value": "string" // Text or Base64 Data URI
 }
 ```
 
-### SocialLink
+#### ClassicSocialLink
 ```json
 {
     "type": "string",
     "value": "string",
     "githubData": {
-        "key": "value (object)"
+        // Arbitrary key-value pairs
     }
 }
 ```
 
-### Project
+#### ClassicProject
 ```json
 {
     "name": "string",
     "url": "string",
     "description": "string",
-    "logo": "string (Base64 / URL)"
+    "logo": "string" // Base64 Data URI / URL
 }
 ```
 
-### WorkExperience
+#### ClassicWorkExperience
 ```json
 {
     "position": "string",
     "company": "string",
     "companyLink": "string",
-    "startDate": "yyyy-MM-dd",
-    "endDate": "yyyy-MM-dd",
+    "startDate": "string", // yyyy-MM-dd
+    "endDate": "string", // yyyy-MM-dd
     "description": "string",
-    "logo": "string"
+    "logo": "string" // Base64 Data URI / URL
 }
 ```
 
-### SchoolExperience
+#### ClassicSchoolExperience
 ```json
 {
     "school": "string",
     "schoolLink": "string",
     "degree": "string",
     "major": "string",
-    "startDate": "yyyy-MM-dd",
-    "endDate": "yyyy-MM-dd",
+    "startDate": "string", // yyyy-MM-dd
+    "endDate": "string", // yyyy-MM-dd
     "description": "string",
-    "logo": "string"
+    "logo": "string" // Base64 Data URI / URL
 }
 ```
 
-### GalleryItem
+#### ClassicGalleryItem
 ```json
 {
-    "image": "string",
+    "image": "string", // Base64 Data URI
     "caption": "string"
+}
+```
+
+#### ClassicAdminRequest
+```json
+{
+    "userName": "string",
+    "token": "string"
+}
+```
+
+#### ClassicCreateUserRequest
+```json
+{
+    "userName": "string",
+    "token": "string",
+    "newUserName": "string",
+    "password": "string",
+    "type": "string"
+}
+```
+
+#### ClassicUserInfo
+```json
+{
+    "userName": "string",
+    "type": "string"
+}
+```
+
+#### ClassicUserListResponse
+```json
+{
+  "users": [ClassicUserInfo]
 }
 ```
