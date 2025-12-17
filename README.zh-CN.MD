@@ -4,9 +4,6 @@
 
 > 注意：本项目不属于 OpenBioCard 官方。
 
-> 注意：**OpenBioCard Server NEXT** 的 API 和数据结构，几乎都完全不兼容原设计/实现。
-> 如需兼容请切换到 Master 分支。
-
 ![.NET](https://img.shields.io/badge/.NET-8.0%2B-512BD4?logo=dotnet)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker)
 ![License](https://img.shields.io/badge/license-MIT-green)
