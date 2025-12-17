@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OpenBioCardServer.Configuration;
 using OpenBioCardServer.Data;
+using OpenBioCardServer.Services;
 
 namespace OpenBioCardServer;
 
@@ -69,6 +70,7 @@ public class Program
         
         // Services
         // builder.Services.AddScoped<...>();
+        builder.Services.AddScoped<ClassicAuthService>();
 
         var app = builder.Build();
 
