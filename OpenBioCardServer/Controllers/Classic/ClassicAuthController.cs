@@ -115,61 +115,53 @@ public class ClassicAuthController : ControllerBase
     {
         try
         {
-            var rootUsername = _config["AuthSettings:RootUsername"];
-            var rootPassword = _config["AuthSettings:RootPassword"];
-
-            // Handle root user login
-            if (request.Username == rootUsername)
+            // 验证必填字段
+            if (string.IsNullOrWhiteSpace(request.Username) || 
+                string.IsNullOrWhiteSpace(request.Password))
             {
-                if (request.Password == rootPassword)
-                {
-                    var rootAccount = await _authService.GetRootAccountAsync();
-                    if (rootAccount == null)
-                    {
-                        return StatusCode(500, new { error = "Root account not initialized" });
-                    }
-
-                    var token = await _authService.CreateTokenAsync(rootAccount);
-                    
-                    // Update last login timestamp
-                    rootAccount.LastLogin = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation("Root user logged in");
-
-                    return Ok(new ClassicTokenResponse { Token = token });
-                }
-                
-                return Unauthorized(new { error = "Invalid username or password" });
+                return BadRequest(new { error = "Username and password are required" });
             }
 
-            // Handle regular user login
+            // 查询账户
             var account = await _context.Accounts
                 .FirstOrDefaultAsync(a => a.UserName == request.Username);
 
+            // 账户不存在
             if (account == null)
             {
+                // 使用通用错误消息，防止用户名枚举攻击
                 return Unauthorized(new { error = "Invalid username or password" });
             }
 
+            // 验证密码（所有用户统一使用哈希验证）
             if (!PasswordHasher.VerifyPassword(request.Password, account.PasswordHash, account.PasswordSalt))
             {
                 return Unauthorized(new { error = "Invalid username or password" });
             }
 
-            var userToken = await _authService.CreateTokenAsync(account);
-            
-            // Update last login timestamp
+            // 生成 Token
+            var token = await _authService.CreateTokenAsync(account);
+        
+            // 更新最后登录时间
             account.LastLogin = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("User logged in: {Username}", request.Username);
+            // 记录日志（区分Root和普通用户）
+            if (account.Type == UserType.Root)
+            {
+                _logger.LogInformation("Root user logged in");
+            }
+            else
+            {
+                _logger.LogInformation("User logged in: {Username} (Type: {Type})", 
+                    request.Username, account.Type);
+            }
 
-            return Ok(new ClassicTokenResponse { Token = userToken });
+            return Ok(new ClassicTokenResponse { Token = token });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during sign in");
+            _logger.LogError(ex, "Error during sign in for user: {Username}", request.Username);
             return StatusCode(503, new { error = "Service temporarily unavailable" });
         }
     }
