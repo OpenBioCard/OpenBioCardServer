@@ -4,7 +4,7 @@
 
 > 注意：本项目不属于 OpenBioCard 官方。
 
-![.NET](https://img.shields.io/badge/.NET-8.0%2B-512BD4?logo=dotnet)
+![.NET](https://img.shields.io/badge/.NET-10.0%2B-512BD4?logo=dotnet)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -33,7 +33,8 @@
 ## ✨ 功能特性
 
 - 🚀 **高性能** - 基于极速的 ASP.NET Core 框架构建。
-- 💾 **灵活存储** - 开发环境默认支持 **SQLite**，生产环境支持 **PostgreSQL**。
+- 💾 **灵活存储** - 支持 **SQLite**、**PostgreSQL** 和 **MySQL**，可根据需求灵活切换。
+- 🛡️ **安全防护** - 内置登录接口限流保护（10次/分钟），防止暴力破解。
 - 🐳 **容器化** - 提供完善的 Docker 支持，部署轻松便捷。
 - 📄 **OpenAPI 支持** - 原生集成 Swagger/OpenAPI，便于接口调试。
 - 🛠️ **跨平台** - 支持 Linux, Windows, macOS 等所有 .NET 支持的平台。
@@ -50,8 +51,8 @@
 
 ### 前置要求
 
-- **.NET SDK**: 8.0 或更高版本
-- **数据库**: PostgreSQL（可选，开发环境默认使用 SQLite）
+- **.NET SDK**: 10.0 或更高版本
+- **数据库**: PostgreSQL 或 MySQL（可选，开发环境默认使用 SQLite）
 
 ### 本地开发
 
@@ -61,8 +62,9 @@
    项目默认使用 `appsettings.Development.json`。
    ```json
    // appsettings.Development.json
-   "ConnectionStrings": {
-     "DefaultConnection": "Data Source=development.db"
+   "DatabaseSettings": {
+     "Type": "SQLite",
+     "ConnectionString": "Data Source=development.db"
    }
    ```
 
@@ -71,7 +73,7 @@
    dotnet run
    ```
    服务器将启动在 `http://localhost:5046`（或配置的端口）。
-   
+
    > 需要配置 OpenBioCard 后端地址为 `http://localhost:5046/classic` （或你的其他端口）。
 
 4. **访问 Swagger UI**
@@ -83,11 +85,13 @@
 
 | 配置项 | 环境变量 Key | 说明 |
 | :--- | :--- | :--- |
-| `ConnectionStrings:DefaultConnection` | `ConnectionStrings__DefaultConnection` | 数据库连接字符串（Postgres）或文件路径（SQLite）。 |
+| `DatabaseSettings:Type` | `DatabaseSettings__Type` | 数据库类型，支持 `SQLite`, `PgSQL`, `MySQL`。 |
+| `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | 数据库连接字符串。 |
 | `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | 系统管理员用户名。 |
 | `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **必填**。系统管理员密码。 |
 | `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | 允许的前端域名列表（逗号分隔）。 |
-| `AppSettings::Version` | `AppSettings__Version` | `/check-backend` 返回给前端的服务器版本名称。 |
+| `AssetSettings:MaxFileSizeMB` | `AssetSettings__MaxFileSizeMB` | 上传文件的最大大小（MB），默认 5MB。 |
+| `AssetSettings:AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | 允许上传的图片 MIME 类型列表。 |
 
 ## 🏗️ 部署指南
 
@@ -111,7 +115,7 @@
 OpenBioCardServer/
 ├── Controllers/      # API 控制器
 ├── Data/             # EF Core 上下文与迁移
-├── Middlewares/      # 中间件
+├── Middlewares/      # 中间件 (如限流配置)
 ├── Models/           # 数据库实体模型
 ├── Services/         # 业务逻辑 (Auth, User, Admin)
 ├── Utilities/        # 工具类
@@ -122,9 +126,9 @@ OpenBioCardServer/
 
 ## 🛠️ 技术栈
 
-- **框架:** .NET 8 / ASP.NET Core
+- **框架:** .NET 10 / ASP.NET Core
 - **ORM:** Entity Framework Core
-- **数据库:** PostgreSQL (Npgsql) / SQLite
+- **数据库:** PostgreSQL / MySQL / SQLite
 - **文档:** Microsoft.AspNetCore.OpenApi
 
 ## 📄 许可证
@@ -132,4 +136,4 @@ OpenBioCardServer/
 本项目采用 MIT 许可证。
 
 ---
-
+```
