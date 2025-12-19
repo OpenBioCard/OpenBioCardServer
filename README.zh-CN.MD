@@ -2,8 +2,6 @@
 
 ✨ OpenBioCard 的独立高性能后端实现 ✨
 
-> 注意：本项目不属于 OpenBioCard 官方。
-
 ![.NET](https://img.shields.io/badge/.NET-10.0%2B-512BD4?logo=dotnet)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker)
 ![License](https://img.shields.io/badge/license-MIT-green)
