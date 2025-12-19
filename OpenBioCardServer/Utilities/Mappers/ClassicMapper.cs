@@ -35,12 +35,14 @@ public static class ClassicMapper
             Gallery = profile.Gallery.Select(ToClassicGalleryItem).ToList()
         };
     }
-
-    private static string AssetToString(AssetType type, string? text, byte[]? data) => type switch
+    
+    public static string AssetToString(AssetType type, string? text, byte[]? data) => type switch
     {
         AssetType.Text => text ?? string.Empty,
         AssetType.Remote => text ?? string.Empty,
-        AssetType.Image => data != null ? $"data:image/png;base64,{Convert.ToBase64String(data)}" : string.Empty,
+        AssetType.Image => data != null 
+            ? $"data:{ImageHelper.DetectMimeType(data)};base64,{Convert.ToBase64String(data)}" 
+            : string.Empty,
         _ => string.Empty
     };
 
