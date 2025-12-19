@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using OpenBioCardServer.Configuration;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Extensions;
+using OpenBioCardServer.Models;
 using OpenBioCardServer.Models.Entities;
 using OpenBioCardServer.Models.Enums;
 using OpenBioCardServer.Services;
@@ -196,7 +197,7 @@ public class Program
                 var defaultSettings = new SystemSettingsEntity
                 {
                     Id = 1,
-                    Title = "OpenBioCard",
+                    Title = SystemSettings.DefaultTitle,
                     LogoType = null,
                     LogoText = null,
                     LogoData = null
