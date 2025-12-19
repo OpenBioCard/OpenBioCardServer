@@ -20,6 +20,9 @@ public class Token
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastUsed { get; set; } = DateTime.UtcNow;
     
+    // Token过期时间（默认7天）
+    public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddDays(7);
+    
     /// <summary>
     /// 设备信息（可选），用于标识设备
     /// </summary>
@@ -28,4 +31,7 @@ public class Token
     
     // Navigation property
     public Account Account { get; set; } = null!;
+    
+    // 检查Token是否过期
+    public bool IsExpired() => DateTime.UtcNow > ExpiresAt;
 }

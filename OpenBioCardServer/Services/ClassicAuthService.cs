@@ -23,22 +23,20 @@ public class ClassicAuthService
 
     public async Task<(bool isValid, Account? account)> ValidateTokenAsync(string token)
     {
-        // Check if it's a root token
-        if (token.StartsWith("root-"))
-        {
-            // For root, we don't store tokens in DB, just verify format and return root account
-            var rootAccount = await GetRootAccountAsync();
-            return (rootAccount != null, rootAccount);
-        }
-
         var tokenEntity = await _context.Tokens
             .Include(t => t.Account)
             .FirstOrDefaultAsync(t => t.TokenValue == token);
 
         if (tokenEntity == null)
             return (false, null);
+        
+        if (tokenEntity.IsExpired())
+        {
+            _context.Tokens.Remove(tokenEntity);
+            await _context.SaveChangesAsync();
+            return (false, null);
+        }
 
-        // Update last used timestamp
         tokenEntity.LastUsed = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
@@ -57,26 +55,36 @@ public class ClassicAuthService
 
     public async Task<string> CreateTokenAsync(Account account)
     {
-        string tokenValue;
+        const int maxTokensPerAccount = 10;
+    
+        var existingTokenCount = await _context.Tokens
+            .CountAsync(t => t.AccountId == account.Id && t.ExpiresAt > DateTime.UtcNow);
+    
+        if (existingTokenCount >= maxTokensPerAccount)
+        {
+            var oldestToken = await _context.Tokens
+                .Where(t => t.AccountId == account.Id)
+                .OrderBy(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
         
-        if (account.Type == UserType.Root)
-        {
-            // Root tokens have special format and are not stored in DB
-            tokenValue = $"root-{Guid.NewGuid()}";
-        }
-        else
-        {
-            tokenValue = Guid.NewGuid().ToString();
-            
-            var token = new Token
+            if (oldestToken != null)
             {
-                TokenValue = tokenValue,
-                AccountId = account.Id
-            };
-
-            _context.Tokens.Add(token);
-            await _context.SaveChangesAsync();
+                _context.Tokens.Remove(oldestToken);
+            }
         }
+
+        var tokenValue = Guid.NewGuid().ToString();
+
+        var token = new Token
+        {
+            TokenValue = tokenValue,
+            AccountId = account.Id,
+            DeviceInfo = account.Type == UserType.Root ? "Root Login" : null,
+            ExpiresAt = DateTime.UtcNow.AddDays(7)
+        };
+
+        _context.Tokens.Add(token);
+        await _context.SaveChangesAsync();
 
         return tokenValue;
     }

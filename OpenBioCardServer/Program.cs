@@ -97,6 +97,7 @@ public class Program
         // Services
         builder.Services.AddScoped<ClassicAuthService>();
         builder.Services.AddScoped<AuthService>();
+        builder.Services.AddHostedService<TokenCleanupService>();
 
         var app = builder.Build();
         
