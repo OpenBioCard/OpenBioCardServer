@@ -84,33 +84,46 @@ public class AdminController : ControllerBase
     [HttpPost("users")]
     public async Task<ActionResult<TokenResponse>> CreateUser([FromBody] CreateUserRequest request)
     {
-        var token = GetTokenFromHeader();
-        var (isValid, account) = await ValidateAdminTokenAsync(token);
+        using var transaction = await _context.Database.BeginTransactionAsync();
+    
+        try
+        {
+            var token = GetTokenFromHeader();
+            var (isValid, account) = await ValidateAdminTokenAsync(token);
         
-        if (!isValid || account == null)
-        {
-            return Unauthorized(new { error = "Invalid token or insufficient permissions" });
-        }
+            if (!isValid || account == null)
+            {
+                return Unauthorized(new { error = "Invalid token or insufficient permissions" });
+            }
 
-        if (!Enum.TryParse<UserType>(request.Type, true, out var userType) || userType == UserType.Root)
-        {
-            return BadRequest(new { error = "Invalid user type" });
-        }
+            if (!Enum.TryParse<UserType>(request.Type, true, out var userType) || userType == UserType.Root)
+            {
+                return BadRequest(new { error = "Invalid user type" });
+            }
 
-        if (await _authService.UsernameExistsAsync(request.NewUsername))
-        {
-            return Conflict(new { error = "Username already exists" });
-        }
+            if (await _authService.UsernameExistsAsync(request.NewUsername))
+            {
+                return Conflict(new { error = "Username already exists" });
+            }
 
-        var newAccount = await _authService.CreateAccountAsync(request.NewUsername, request.Password, userType);
-        await _authService.CreateDefaultProfileAsync(newAccount.Id, request.NewUsername);
+            var newAccount = await _authService.CreateAccountAsync(request.NewUsername, request.Password, userType);
+            await _authService.CreateDefaultProfileAsync(newAccount.Id, request.NewUsername);
         
-        var newToken = await _authService.CreateTokenAsync(newAccount);
+            var newToken = await _authService.CreateTokenAsync(newAccount);
 
-        _logger.LogInformation("Admin {AdminUser} created new user: {NewUser} (Type: {Type})", 
-            account.UserName, request.NewUsername, userType);
+            await transaction.CommitAsync();
 
-        return Ok(new TokenResponse { Token = newToken });
+            _logger.LogInformation("Admin {AdminUser} created new user: {NewUser} (Type: {Type})", 
+                account.UserName, request.NewUsername, userType);
+
+            return Ok(new TokenResponse { Token = newToken });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error creating new user");
+            return StatusCode(500, new { error = "User creation failed" });
+        }
     }
 
     /// <summary>

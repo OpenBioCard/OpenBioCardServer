@@ -35,38 +35,52 @@ public class AuthController : ControllerBase
     [EnableRateLimiting("login")]
     public async Task<ActionResult<TokenResponse>> SignUp([FromBody] SignUpRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || 
-            string.IsNullOrWhiteSpace(request.Password) ||
-            string.IsNullOrWhiteSpace(request.UserType))
+        using var transaction = await _context.Database.BeginTransactionAsync();
+    
+        try
         {
-            return BadRequest(new { error = "Missing required fields" });
-        }
+            if (string.IsNullOrWhiteSpace(request.Username) || 
+                string.IsNullOrWhiteSpace(request.Password) ||
+                string.IsNullOrWhiteSpace(request.UserType))
+            {
+                return BadRequest(new { error = "Missing required fields" });
+            }
 
-        if (!Enum.TryParse<UserType>(request.UserType, true, out var userType))
+            if (!Enum.TryParse<UserType>(request.UserType, true, out var userType))
+            {
+                return BadRequest(new { error = "Invalid user type" });
+            }
+
+            if (userType == UserType.Root)
+            {
+                return Forbid("Cannot create root users");
+            }
+
+            if (await _authService.UsernameExistsAsync(request.Username))
+            {
+                return Conflict(new { error = "Username already exists" });
+            }
+
+            var account = await _authService.CreateAccountAsync(request.Username, request.Password, userType);
+            await _authService.CreateDefaultProfileAsync(account.Id, request.Username);
+
+            var token = await _authService.CreateTokenAsync(account);
+
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("New user registered: {Username} (Type: {Type})", 
+                request.Username, userType);
+
+            return Ok(new TokenResponse { Token = token });
+        }
+        catch (Exception ex)
         {
-            return BadRequest(new { error = "Invalid user type" });
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error during user registration");
+            return StatusCode(500, new { error = "Account creation failed" });
         }
-
-        if (userType == UserType.Root)
-        {
-            return Forbid("Cannot create root users");
-        }
-
-        if (await _authService.UsernameExistsAsync(request.Username))
-        {
-            return Conflict(new { error = "Username already exists" });
-        }
-
-        var account = await _authService.CreateAccountAsync(request.Username, request.Password, userType);
-        await _authService.CreateDefaultProfileAsync(account.Id, request.Username);
-
-        var token = await _authService.CreateTokenAsync(account);
-
-        _logger.LogInformation("New user registered: {Username} (Type: {Type})", 
-            request.Username, userType);
-
-        return Ok(new TokenResponse { Token = token });
     }
+
 
     /// <summary>
     /// 用户登录

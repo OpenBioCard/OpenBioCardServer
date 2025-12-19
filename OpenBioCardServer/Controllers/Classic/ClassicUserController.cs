@@ -65,6 +65,8 @@ public class ClassicUserController : ControllerBase
     [HttpPost("{username}")]
     public async Task<IActionResult> UpdateProfile(string username, [FromBody] ClassicProfile request)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        
         try
         {
             // Extract token from Authorization header
@@ -105,15 +107,7 @@ public class ClassicUserController : ControllerBase
             // Update basic profile fields
             ClassicMapper.UpdateProfileFromClassic(profile, request);
             
-            // Clear all existing collections (we'll replace them completely)
-            // _context.ContactItems.RemoveRange(profile.Contacts);
-            // _context.SocialLinkItems.RemoveRange(profile.SocialLinks);
-            // _context.ProjectItems.RemoveRange(profile.Projects);
-            // _context.WorkExperienceItems.RemoveRange(profile.WorkExperiences);
-            // _context.SchoolExperienceItems.RemoveRange(profile.SchoolExperiences);
-            // _context.GalleryItems.RemoveRange(profile.Gallery);
-
-
+            // Clear all existing collections using ExecuteDeleteAsync
             await _context.ContactItems
                 .Where(c => c.ProfileId == profile.Id)
                 .ExecuteDeleteAsync();
@@ -176,6 +170,7 @@ public class ClassicUserController : ControllerBase
             }
 
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
 
             _logger.LogInformation("Profile updated for user: {Username}", username);
 
@@ -183,6 +178,7 @@ public class ClassicUserController : ControllerBase
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error updating profile for user: {Username}", username);
             return StatusCode(500, new { error = "Profile update failed" });
         }

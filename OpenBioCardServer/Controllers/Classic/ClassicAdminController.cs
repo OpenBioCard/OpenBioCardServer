@@ -134,6 +134,8 @@ public class ClassicAdminController : ControllerBase
     [HttpPost("users")]
     public async Task<IActionResult> CreateUser([FromBody] ClassicCreateUserRequest request)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        
         try
         {
             var (isValid, account) = await _authService.ValidateTokenAsync(request.Token);
@@ -199,6 +201,8 @@ public class ClassicAdminController : ControllerBase
             // Generate token for new user
             var newToken = await _authService.CreateTokenAsync(newAccount);
 
+            await transaction.CommitAsync();
+
             _logger.LogInformation("Admin {AdminUser} created new user: {NewUser} (Type: {Type})", 
                 request.Username, request.NewUsername, userType);
 
@@ -210,6 +214,7 @@ public class ClassicAdminController : ControllerBase
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error creating new user");
             return StatusCode(500, new { error = "User creation failed" });
         }

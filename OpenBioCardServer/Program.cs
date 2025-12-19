@@ -159,55 +159,81 @@ public class Program
             }
             else
             {
-                var rootAccount = await context.Accounts
-                    .FirstOrDefaultAsync(a => a.UserName == rootUsername);
-
-                if (rootAccount == null)
+                using var transaction = await context.Database.BeginTransactionAsync();
+                
+                try
                 {
-                    // Create root account
-                    var (hash, salt) = PasswordHasher.HashPassword(rootPassword);
-                    rootAccount = new Account
+                    var rootAccount = await context.Accounts
+                        .FirstOrDefaultAsync(a => a.UserName == rootUsername);
+
+                    if (rootAccount == null)
                     {
-                        UserName = rootUsername,
-                        PasswordHash = hash,
-                        PasswordSalt = salt,
-                        Type = UserType.Root
-                    };
+                        // Create root account
+                        var (hash, salt) = PasswordHasher.HashPassword(rootPassword);
+                        rootAccount = new Account
+                        {
+                            UserName = rootUsername,
+                            PasswordHash = hash,
+                            PasswordSalt = salt,
+                            Type = UserType.Root
+                        };
 
-                    context.Accounts.Add(rootAccount);
-                    await context.SaveChangesAsync();
-        
-                    logger.LogInformation("==> Root user created: {Username}", rootUsername);
+                        context.Accounts.Add(rootAccount);
+                        await context.SaveChangesAsync();
+
+                        logger.LogInformation("==> Root user created: {Username}", rootUsername);
+                    }
+                    else
+                    {
+                        // Update root password on every startup
+                        var (hash, salt) = PasswordHasher.HashPassword(rootPassword);
+                        rootAccount.PasswordHash = hash;
+                        rootAccount.PasswordSalt = salt;
+                        await context.SaveChangesAsync();
+
+                        logger.LogInformation("==> Root password updated for: {Username}", rootUsername);
+                    }
+                    
+                    await transaction.CommitAsync();
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Update root password on every startup
-                    var (hash, salt) = PasswordHasher.HashPassword(rootPassword);
-                    rootAccount.PasswordHash = hash;
-                    rootAccount.PasswordSalt = salt;
-                    await context.SaveChangesAsync();
-        
-                    logger.LogInformation("==> Root password updated for: {Username}", rootUsername);
+                    await transaction.RollbackAsync();
+                    logger.LogError(ex, "Error during root user initialization");
+                    throw;
                 }
             }
-            
+
             // System settings initialization
-            var existingSettings = await context.SystemSettings.FindAsync(1);
-            if (existingSettings == null)
+            using var settingsTransaction = await context.Database.BeginTransactionAsync();
+
+            try
             {
-                var defaultSettings = new SystemSettingsEntity
+                var existingSettings = await context.SystemSettings.FindAsync(1);
+                if (existingSettings == null)
                 {
-                    Id = 1,
-                    Title = SystemSettings.DefaultTitle,
-                    LogoType = null,
-                    LogoText = null,
-                    LogoData = null
-                };
-        
-                context.SystemSettings.Add(defaultSettings);
-                await context.SaveChangesAsync();
-        
-                logger.LogInformation("==> Default system settings initialized");
+                    var defaultSettings = new SystemSettingsEntity
+                    {
+                        Id = 1,
+                        Title = SystemSettings.DefaultTitle,
+                        LogoType = null,
+                        LogoText = null,
+                        LogoData = null
+                    };
+
+                    context.SystemSettings.Add(defaultSettings);
+                    await context.SaveChangesAsync();
+
+                    logger.LogInformation("==> Default system settings initialized");
+                }
+                
+                await settingsTransaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await settingsTransaction.RollbackAsync();
+                logger.LogError(ex, "Error during system settings initialization");
+                throw;
             }
         }
 

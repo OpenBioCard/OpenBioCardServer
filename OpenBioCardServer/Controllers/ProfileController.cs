@@ -56,39 +56,52 @@ public class ProfileController : ControllerBase
     [HttpPut("{username}")]
     public async Task<IActionResult> UpdateProfile(string username, [FromBody] ProfileDto request)
     {
-        var token = GetTokenFromHeader();
-        var (isValid, account) = await ValidateTokenAndUser(token, username);
+        using var transaction = await _context.Database.BeginTransactionAsync();
+    
+        try
+        {
+            var token = GetTokenFromHeader();
+            var (isValid, account) = await ValidateTokenAndUser(token, username);
         
-        if (!isValid || account == null)
-        {
-            return Unauthorized(new { error = "Invalid token or token does not match username" });
+            if (!isValid || account == null)
+            {
+                return Unauthorized(new { error = "Invalid token or token does not match username" });
+            }
+
+            var profile = await _context.Profiles
+                .Include(p => p.Contacts)
+                .Include(p => p.SocialLinks)
+                .Include(p => p.Projects)
+                .Include(p => p.WorkExperiences)
+                .Include(p => p.SchoolExperiences)
+                .Include(p => p.Gallery)
+                .FirstOrDefaultAsync(p => p.Username == username);
+
+            if (profile == null)
+            {
+                return NotFound(new { error = "Profile not found" });
+            }
+
+            // 更新基本资料
+            DataMapper.UpdateProfileEntity(profile, request);
+
+            // 清除并替换所有子项
+            await ReplaceCollectionItemsAsync(profile, request);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Profile updated for user: {Username}", username);
+            return Ok(new { success = true });
         }
-
-        var profile = await _context.Profiles
-            .Include(p => p.Contacts)
-            .Include(p => p.SocialLinks)
-            .Include(p => p.Projects)
-            .Include(p => p.WorkExperiences)
-            .Include(p => p.SchoolExperiences)
-            .Include(p => p.Gallery)
-            .FirstOrDefaultAsync(p => p.Username == username);
-
-        if (profile == null)
+        catch (Exception ex)
         {
-            return NotFound(new { error = "Profile not found" });
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error updating profile for user: {Username}", username);
+            return StatusCode(500, new { error = "Profile update failed" });
         }
-
-        // 更新基本资料
-        DataMapper.UpdateProfileEntity(profile, request);
-
-        // 清除并替换所有子项
-        await ReplaceCollectionItemsAsync(profile, request);
-
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Profile updated for user: {Username}", username);
-        return Ok(new { success = true });
     }
+
 
     /// <summary>
     /// 获取当前登录用户的资料（私有）

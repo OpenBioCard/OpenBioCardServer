@@ -38,6 +38,8 @@ public class ClassicAuthController : ControllerBase
     [EnableRateLimiting("login")]
     public async Task<IActionResult> SignUp([FromBody] ClassicSignUpRequest request)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        
         try
         {
             // Validate required fields
@@ -94,6 +96,8 @@ public class ClassicAuthController : ControllerBase
             // Generate authentication token
             var token = await _authService.CreateTokenAsync(account);
 
+            await transaction.CommitAsync();
+
             _logger.LogInformation("New user registered: {Username} (Type: {Type})", 
                 request.Username, userType);
 
@@ -101,6 +105,7 @@ public class ClassicAuthController : ControllerBase
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error during user registration");
             return StatusCode(500, new { error = "Account creation failed" });
         }
@@ -204,56 +209,6 @@ public class ClassicAuthController : ControllerBase
         {
             _logger.LogError(ex, "Error during account deletion");
             return StatusCode(500, new { error = "Account deletion failed" });
-        }
-    }
-
-    /// <summary>
-    /// Initialize admin user (for first-time setup only)
-    /// </summary>
-    [HttpGet("init-admin")]
-    public async Task<IActionResult> InitAdmin()
-    {
-        try
-        {
-            // Only allow if no users exist yet
-            if (await _context.Accounts.AnyAsync())
-            {
-                return Ok("Admin already initialized");
-            }
-
-            // Create default admin account
-            var (hash, salt) = PasswordHasher.HashPassword("admin");
-            var admin = new Account
-            {
-                UserName = "admin",
-                PasswordHash = hash,
-                PasswordSalt = salt,
-                Type = UserType.Admin
-            };
-
-            _context.Accounts.Add(admin);
-            await _context.SaveChangesAsync();
-
-            // Create default profile
-            var profile = new ProfileEntity
-            {
-                AccountId = admin.Id,
-                Username = "admin",
-                AvatarType = AssetType.Text,
-                AvatarText = "👤"
-            };
-
-            _context.Profiles.Add(profile);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Admin user initialized");
-
-            return Ok("Admin initialized");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error during admin initialization");
-            return StatusCode(500, new { error = "Initialization failed" });
         }
     }
 }
