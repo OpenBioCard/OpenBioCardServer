@@ -161,7 +161,7 @@ public static class ClassicMapper
         profile.CurrentSchoolLink = classic.CurrentSchoolLink;
     }
 
-    private static (AssetType type, string? text, byte[]? data) ParseAsset(string value)
+    public static (AssetType type, string? text, byte[]? data) ParseAsset(string value)
     {
         if (string.IsNullOrEmpty(value))
             return (AssetType.Text, null, null);

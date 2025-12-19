@@ -23,6 +23,9 @@ public class AppDbContext : DbContext
     public DbSet<WorkExperienceItemEntity> WorkExperienceItems => Set<WorkExperienceItemEntity>();
     public DbSet<SchoolExperienceItemEntity> SchoolExperienceItems => Set<SchoolExperienceItemEntity>();
     public DbSet<GalleryItemEntity> GalleryItems => Set<GalleryItemEntity>();
+    
+    // DbSets (System Settings)
+    public DbSet<SystemSettingsEntity> SystemSettings => Set<SystemSettingsEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -107,6 +110,13 @@ public class AppDbContext : DbContext
             
             entity.Property(e => e.AttributesJson)
                 .HasColumnType(columnType);
+        });
+        
+        // System Settings configuration
+        modelBuilder.Entity<SystemSettingsEntity>(entity =>
+        {
+            // Ensure only one record can exist with Id = 1
+            entity.HasIndex(e => e.Id).IsUnique();
         });
     }
     

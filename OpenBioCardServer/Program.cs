@@ -188,6 +188,25 @@ public class Program
                     logger.LogInformation("==> Root password updated for: {Username}", rootUsername);
                 }
             }
+            
+            // System settings initialization
+            var existingSettings = await context.SystemSettings.FindAsync(1);
+            if (existingSettings == null)
+            {
+                var defaultSettings = new SystemSettingsEntity
+                {
+                    Id = 1,
+                    Title = "OpenBioCard",
+                    LogoType = null,
+                    LogoText = null,
+                    LogoData = null
+                };
+        
+                context.SystemSettings.Add(defaultSettings);
+                await context.SaveChangesAsync();
+        
+                logger.LogInformation("==> Default system settings initialized");
+            }
         }
 
         if (app.Environment.IsDevelopment())
