@@ -114,6 +114,7 @@ Configuration is managed via `appsettings.json` or environment variables.
 | :--- | :--- | :--- |
 | `DatabaseSettings:Type` | `DatabaseSettings__Type` | Database type, supports `SQLite`, `PgSQL`, `MySQL`. |
 | `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | Database connection string. |
+| `CacheSettings:Enabled` | `CacheSettings__Enabled` | **New**. Enable or disable all caching. Default is `true`. |
 | `CacheSettings:UseRedis` | `CacheSettings__UseRedis` | Enable Redis distributed cache (`true`/`false`). Default is `false` (Memory Cache). |
 | `CacheSettings:RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis connection string (e.g., `localhost:6379`). Required if UseRedis is true. |
 | `CompressionSettings:Enabled` | `CompressionSettings__Enabled` | Enable HTTP response compression. Default is `true`. |

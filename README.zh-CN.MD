@@ -114,6 +114,7 @@
 | :--- | :--- | :--- |
 | `DatabaseSettings:Type` | `DatabaseSettings__Type` | 数据库类型，支持 `SQLite`, `PgSQL`, `MySQL`。 |
 | `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | 数据库连接字符串。 |
+| `CacheSettings:Enabled` | `CacheSettings__Enabled` | **新增**。是否启用缓存（内存或 Redis）。默认为 `true`。 |
 | `CacheSettings:UseRedis` | `CacheSettings__UseRedis` | 是否启用 Redis 分布式缓存 (`true`/`false`)。默认为 `false` (使用内存缓存)。 |
 | `CacheSettings:RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis 连接字符串 (如 `localhost:6379`)。启用 Redis 时必填。 |
 | `CompressionSettings:Enabled` | `CompressionSettings__Enabled` | 是否启用 HTTP 响应压缩。默认为 `true`。 |
