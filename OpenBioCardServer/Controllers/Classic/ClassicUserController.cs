@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using OpenBioCardServer.Data;
+using OpenBioCardServer.Interfaces;
 using OpenBioCardServer.Models.DTOs.Classic;
 using OpenBioCardServer.Services;
 using OpenBioCardServer.Utilities.Mappers;
@@ -16,47 +17,21 @@ public class ClassicUserController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ClassicAuthService _authService;
+    private readonly ICacheService _cacheService;
     private readonly ILogger<ClassicUserController> _logger;
-    
-    // 缓存相关依赖
-    private readonly IMemoryCache _memoryCache;
-    private readonly IDistributedCache? _distributedCache;
-    private readonly IConfiguration _configuration;
-    
-    // 缓存配置字段
-    private readonly bool _isCacheEnabled;
-    private readonly bool _useRedis;
-    private readonly TimeSpan _absoluteExpiration; 
-    private readonly TimeSpan _slidingExpiration; 
 
     public ClassicUserController(
         AppDbContext context,
         ClassicAuthService authService,
-        ILogger<ClassicUserController> logger,
-        IMemoryCache memoryCache,
-        IConfiguration configuration,
-        IServiceProvider serviceProvider)
+        ICacheService cacheService,
+        ILogger<ClassicUserController> logger)
     {
         _context = context;
         _authService = authService;
+        _cacheService = cacheService;
         _logger = logger;
-        _memoryCache = memoryCache;
-        _configuration = configuration;
-        
-        // 读取缓存配置
-        _isCacheEnabled = configuration.GetValue<bool>("CacheSettings:Enabled", true);
-        _useRedis = configuration.GetValue<bool>("CacheSettings:UseRedis");
-        var absMinutes = configuration.GetValue<int>("CacheSettings:ExpirationMinutes", 5);
-        var slideMinutes = configuration.GetValue<int>("CacheSettings:SlidingExpirationMinutes", 2);
-        _absoluteExpiration = TimeSpan.FromMinutes(absMinutes);
-        _slidingExpiration = TimeSpan.FromMinutes(slideMinutes);
-        
-        // 如果启用了 Redis，尝试获取 IDistributedCache 服务
-        if (_useRedis)
-        {
-            _distributedCache = serviceProvider.GetService<IDistributedCache>();
-        }
     }
+
     
     // 生成统一的 Cache Key
     private static string GetProfileCacheKey(string username) => 
@@ -69,88 +44,29 @@ public class ClassicUserController : ControllerBase
     public async Task<IActionResult> GetProfile(string username)
     {
         string cacheKey = GetProfileCacheKey(username);
-        ClassicProfile? cachedProfile = null;
-        
-        // 读取缓存
-        if (_isCacheEnabled)
-        {
-            try
-            {
-                if (_useRedis && _distributedCache != null)
-                {
-                    // Redis: 读取字符串并反序列化
-                    var jsonStr = await _distributedCache.GetStringAsync(cacheKey);
-                    if (!string.IsNullOrEmpty(jsonStr))
-                    {
-                        cachedProfile = JsonSerializer.Deserialize<ClassicProfile>(jsonStr);
-                    }
-                }
-                else
-                {
-                    // Memory: 直接读取对象引用
-                    _memoryCache.TryGetValue(cacheKey, out cachedProfile);
-                }
-                if (cachedProfile != null)
-                {
-                    return Ok(cachedProfile);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Cache read failed for {Key}", cacheKey);
-            }
-        }
         
         try
         {
-            var profile = await _context.Profiles
-                .AsNoTracking()
-                .AsSplitQuery()
-                .Include(p => p.Contacts)
-                .Include(p => p.SocialLinks)
-                .Include(p => p.Projects)
-                .Include(p => p.WorkExperiences)
-                .Include(p => p.SchoolExperiences)
-                .Include(p => p.Gallery)
-                .FirstOrDefaultAsync(p => p.Username == username);
-
-            if (profile == null)
+            var profileDto = await _cacheService.GetOrCreateAsync(cacheKey, async () =>
+            {
+                var profile = await _context.Profiles
+                    .AsNoTracking()
+                    .AsSplitQuery()
+                    .Include(p => p.Contacts)
+                    .Include(p => p.SocialLinks)
+                    .Include(p => p.Projects)
+                    .Include(p => p.WorkExperiences)
+                    .Include(p => p.SchoolExperiences)
+                    .Include(p => p.Gallery)
+                    .FirstOrDefaultAsync(p => p.Username == username);
+                return profile == null ? null : ClassicMapper.ToClassicProfile(profile);
+            });
+            
+            if (profileDto == null)
             {
                 return NotFound(new { error = "User not found" });
             }
-
-            var classicProfile = ClassicMapper.ToClassicProfile(profile);
-            
-            // 写入缓存
-            if (_isCacheEnabled)
-            {
-                try 
-                {
-                    if (_useRedis && _distributedCache != null)
-                    {
-                        // Redis: 序列化为 JSON 存储
-                        var jsonStr = JsonSerializer.Serialize(classicProfile);
-                        await _distributedCache.SetStringAsync(cacheKey, jsonStr, new DistributedCacheEntryOptions
-                        {
-                            AbsoluteExpirationRelativeToNow = _absoluteExpiration
-                        });
-                    }
-                    else
-                    {
-                        // Memory: 存储对象引用 (带 Size 限制)
-                        _memoryCache.Set(cacheKey, classicProfile, new MemoryCacheEntryOptions()
-                            .SetAbsoluteExpiration(_absoluteExpiration)
-                            .SetSlidingExpiration(_slidingExpiration)
-                            .SetSize(1));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Cache write failed for {Key}", cacheKey);
-                }
-            }
-
-            return Ok(classicProfile);
+            return Ok(profileDto);
         }
         catch (Exception ex)
         {
@@ -158,6 +74,7 @@ public class ClassicUserController : ControllerBase
             return StatusCode(500, new { error = "Internal server error" });
         }
     }
+
 
     /// <summary>
     /// Update user profile (requires authentication)
@@ -267,25 +184,7 @@ public class ClassicUserController : ControllerBase
             await transaction.CommitAsync();
             
             // 清除缓存
-            if (_isCacheEnabled)
-            {
-                string cacheKey = GetProfileCacheKey(username);
-                try 
-                {
-                    if (_useRedis && _distributedCache != null)
-                    {
-                        await _distributedCache.RemoveAsync(cacheKey);
-                    }
-                    else
-                    {
-                        _memoryCache.Remove(cacheKey);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Cache removal failed for {Key}", cacheKey);
-                }
-            }
+            await _cacheService.RemoveAsync(GetProfileCacheKey(username));
 
             _logger.LogInformation("Profile updated for user: {Username}", username);
 

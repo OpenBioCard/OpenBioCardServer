@@ -12,6 +12,7 @@ using OpenBioCardServer.Services;
 using OpenBioCardServer.Utilities;
 using Microsoft.AspNetCore.ResponseCompression;
 using System.IO.Compression;
+using OpenBioCardServer.Interfaces;
 
 namespace OpenBioCardServer;
 
@@ -79,33 +80,31 @@ public class Program
 
         // Database configuration with validation
         builder.Services.AddDatabaseContext(builder.Configuration);
-
-        // Cache Configuration (Memory & Redis)
-        var cacheSection = builder.Configuration.GetSection("CacheSettings");
-        var useRedis = cacheSection.GetValue<bool>("UseRedis");
-        var cacheSizeLimit = cacheSection.GetValue<long?>("CacheSizeLimit") ?? 100;
-        var redisInstanceName = cacheSection.GetValue<string>("InstanceName") ?? "OpenBioCard:";
-
+        
+        builder.Services.Configure<CacheSettings>(
+            builder.Configuration.GetSection(CacheSettings.SectionName));
+        builder.Services.AddSingleton<IValidateOptions<CacheSettings>, CacheSettingsValidator>();
+        
+        var cacheSettings = builder.Configuration.GetSection(CacheSettings.SectionName)
+                                .Get<CacheSettings>() ?? new CacheSettings();
+        
         // Configure Local Memory Cache (Always available, with OOM protection)
         builder.Services.AddMemoryCache(options =>
         {
-            options.SizeLimit = cacheSizeLimit;
-            options.CompactionPercentage = 0.2; // Free up 20% when limit is reached
+            options.SizeLimit = cacheSettings.CacheSizeLimit ?? 100;
+            options.CompactionPercentage = 0.2;
         });
 
-        // Configure Distributed Cache (Redis) if enabled
-        if (useRedis)
+        if (cacheSettings.UseRedis && !string.IsNullOrEmpty(cacheSettings.RedisConnectionString))
         {
-            var redisConn = cacheSection.GetValue<string>("RedisConnectionString");
-            if (!string.IsNullOrEmpty(redisConn))
+            builder.Services.AddStackExchangeRedisCache(options =>
             {
-                builder.Services.AddStackExchangeRedisCache(options =>
-                {
-                    options.Configuration = redisConn;
-                    options.InstanceName = redisInstanceName;
-                });
-            }
+                options.Configuration = cacheSettings.RedisConnectionString;
+                options.InstanceName = cacheSettings.InstanceName;
+            });
         }
+        
+        builder.Services.AddSingleton<ICacheService, CacheService>();
 
         // Response Compression Configuration
         var compressionSection = builder.Configuration.GetSection("CompressionSettings");
