@@ -26,6 +26,7 @@ public class ClassicUserController : ControllerBase
     // 缓存配置字段
     private readonly bool _useRedis;
     private readonly int _expirationMinutes;
+    private readonly int _slidingExpiration;
 
     public ClassicUserController(
         AppDbContext context,
@@ -44,6 +45,7 @@ public class ClassicUserController : ControllerBase
         // 读取缓存配置
         _useRedis = configuration.GetValue<bool>("CacheSettings:UseRedis");
         _expirationMinutes = configuration.GetValue<int>("CacheSettings:ExpirationMinutes", 5);
+        _slidingExpiration = configuration.GetValue<int>("CacheSettings:SlidingExpirationMinutes", 2);
         
         // 如果启用了 Redis，尝试获取 IDistributedCache 服务
         if (_useRedis)
@@ -130,7 +132,7 @@ public class ClassicUserController : ControllerBase
                     // Memory: 存储对象引用 (带 Size 限制)
                     _memoryCache.Set(cacheKey, classicProfile, new MemoryCacheEntryOptions()
                         .SetAbsoluteExpiration(TimeSpan.FromMinutes(_expirationMinutes))
-                        .SetSlidingExpiration(TimeSpan.FromMinutes(2))
+                        .SetSlidingExpiration(TimeSpan.FromMinutes(_slidingExpiration))
                         .SetSize(1));
                 }
             }
