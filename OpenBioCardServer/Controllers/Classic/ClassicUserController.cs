@@ -25,8 +25,8 @@ public class ClassicUserController : ControllerBase
     
     // 缓存配置字段
     private readonly bool _useRedis;
-    private readonly int _expirationMinutes;
-    private readonly int _slidingExpiration;
+    private readonly TimeSpan _absoluteExpiration; 
+    private readonly TimeSpan _slidingExpiration; 
 
     public ClassicUserController(
         AppDbContext context,
@@ -44,8 +44,10 @@ public class ClassicUserController : ControllerBase
         
         // 读取缓存配置
         _useRedis = configuration.GetValue<bool>("CacheSettings:UseRedis");
-        _expirationMinutes = configuration.GetValue<int>("CacheSettings:ExpirationMinutes", 5);
-        _slidingExpiration = configuration.GetValue<int>("CacheSettings:SlidingExpirationMinutes", 2);
+        var absMinutes = configuration.GetValue<int>("CacheSettings:ExpirationMinutes", 5);
+        var slideMinutes = configuration.GetValue<int>("CacheSettings:SlidingExpirationMinutes", 2);
+        _absoluteExpiration = TimeSpan.FromMinutes(absMinutes);
+        _slidingExpiration = TimeSpan.FromMinutes(slideMinutes);
         
         // 如果启用了 Redis，尝试获取 IDistributedCache 服务
         if (_useRedis)
@@ -124,15 +126,15 @@ public class ClassicUserController : ControllerBase
                     var jsonStr = JsonSerializer.Serialize(classicProfile);
                     await _distributedCache.SetStringAsync(cacheKey, jsonStr, new DistributedCacheEntryOptions
                     {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_expirationMinutes)
+                        AbsoluteExpirationRelativeToNow = _absoluteExpiration
                     });
                 }
                 else
                 {
                     // Memory: 存储对象引用 (带 Size 限制)
                     _memoryCache.Set(cacheKey, classicProfile, new MemoryCacheEntryOptions()
-                        .SetAbsoluteExpiration(TimeSpan.FromMinutes(_expirationMinutes))
-                        .SetSlidingExpiration(TimeSpan.FromMinutes(_slidingExpiration))
+                        .SetAbsoluteExpiration(_absoluteExpiration)
+                        .SetSlidingExpiration(_slidingExpiration)
                         .SetSize(1));
                 }
             }
