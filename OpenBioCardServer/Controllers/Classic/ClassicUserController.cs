@@ -1,5 +1,8 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Models.DTOs.Classic;
 using OpenBioCardServer.Services;
@@ -14,16 +17,44 @@ public class ClassicUserController : ControllerBase
     private readonly AppDbContext _context;
     private readonly ClassicAuthService _authService;
     private readonly ILogger<ClassicUserController> _logger;
+    
+    // 缓存相关依赖
+    private readonly IMemoryCache _memoryCache;
+    private readonly IDistributedCache? _distributedCache;
+    private readonly IConfiguration _configuration;
+    
+    // 缓存配置字段
+    private readonly bool _useRedis;
+    private readonly int _expirationMinutes;
 
     public ClassicUserController(
         AppDbContext context,
         ClassicAuthService authService,
-        ILogger<ClassicUserController> logger)
+        ILogger<ClassicUserController> logger,
+        IMemoryCache memoryCache,
+        IConfiguration configuration,
+        IServiceProvider serviceProvider)
     {
         _context = context;
         _authService = authService;
         _logger = logger;
+        _memoryCache = memoryCache;
+        _configuration = configuration;
+        
+        // 读取缓存配置
+        _useRedis = configuration.GetValue<bool>("CacheSettings:UseRedis");
+        _expirationMinutes = configuration.GetValue<int>("CacheSettings:ExpirationMinutes", 5);
+        
+        // 如果启用了 Redis，尝试获取 IDistributedCache 服务
+        if (_useRedis)
+        {
+            _distributedCache = serviceProvider.GetService<IDistributedCache>();
+        }
     }
+    
+    // 生成统一的 Cache Key
+    private static string GetProfileCacheKey(string username) => 
+        $"Profile:{username.Trim().ToLowerInvariant()}";
 
     /// <summary>
     /// Get user profile (public endpoint)
@@ -31,6 +62,37 @@ public class ClassicUserController : ControllerBase
     [HttpGet("{username}")]
     public async Task<IActionResult> GetProfile(string username)
     {
+        string cacheKey = GetProfileCacheKey(username);
+        ClassicProfile? cachedProfile = null;
+        
+        // 读取缓存
+        try
+        {
+            if (_useRedis && _distributedCache != null)
+            {
+                // Redis: 读取字符串并反序列化
+                var jsonStr = await _distributedCache.GetStringAsync(cacheKey);
+                if (!string.IsNullOrEmpty(jsonStr))
+                {
+                    cachedProfile = JsonSerializer.Deserialize<ClassicProfile>(jsonStr);
+                }
+            }
+            else
+            {
+                // Memory: 直接读取对象引用
+                _memoryCache.TryGetValue(cacheKey, out cachedProfile);
+            }
+            if (cachedProfile != null)
+            {
+                return Ok(cachedProfile);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Cache read failed for {Key}", cacheKey);
+        }
+
+        
         try
         {
             var profile = await _context.Profiles
@@ -50,6 +112,32 @@ public class ClassicUserController : ControllerBase
             }
 
             var classicProfile = ClassicMapper.ToClassicProfile(profile);
+            
+            // 写入缓存
+            try 
+            {
+                if (_useRedis && _distributedCache != null)
+                {
+                    // Redis: 序列化为 JSON 存储
+                    var jsonStr = JsonSerializer.Serialize(classicProfile);
+                    await _distributedCache.SetStringAsync(cacheKey, jsonStr, new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_expirationMinutes)
+                    });
+                }
+                else
+                {
+                    // Memory: 存储对象引用 (带 Size 限制)
+                    _memoryCache.Set(cacheKey, classicProfile, new MemoryCacheEntryOptions()
+                        .SetAbsoluteExpiration(TimeSpan.FromMinutes(_expirationMinutes))
+                        .SetSlidingExpiration(TimeSpan.FromMinutes(2))
+                        .SetSize(1));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Cache write failed for {Key}", cacheKey);
+            }
 
             return Ok(classicProfile);
         }
@@ -166,6 +254,24 @@ public class ClassicUserController : ControllerBase
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+            
+            // 清除缓存
+            string cacheKey = GetProfileCacheKey(username);
+            try 
+            {
+                if (_useRedis && _distributedCache != null)
+                {
+                    await _distributedCache.RemoveAsync(cacheKey);
+                }
+                else
+                {
+                    _memoryCache.Remove(cacheKey);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Cache removal failed for {Key}", cacheKey);
+            }
 
             _logger.LogInformation("Profile updated for user: {Username}", username);
 

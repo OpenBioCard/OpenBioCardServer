@@ -10,6 +10,8 @@ using OpenBioCardServer.Models.Entities;
 using OpenBioCardServer.Models.Enums;
 using OpenBioCardServer.Services;
 using OpenBioCardServer.Utilities;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 
 namespace OpenBioCardServer;
 
@@ -77,7 +79,65 @@ public class Program
 
         // Database configuration with validation
         builder.Services.AddDatabaseContext(builder.Configuration);
-        
+
+        // Cache Configuration (Memory & Redis)
+        var cacheSection = builder.Configuration.GetSection("CacheSettings");
+        var useRedis = cacheSection.GetValue<bool>("UseRedis");
+        var cacheSizeLimit = cacheSection.GetValue<long?>("ProfileCacheSizeLimit") ?? 100;
+        var redisInstanceName = cacheSection.GetValue<string>("InstanceName") ?? "OpenBioCard:";
+
+        // Configure Local Memory Cache (Always available, with OOM protection)
+        builder.Services.AddMemoryCache(options =>
+        {
+            options.SizeLimit = cacheSizeLimit;
+            options.CompactionPercentage = 0.2; // Free up 20% when limit is reached
+        });
+
+        // Configure Distributed Cache (Redis) if enabled
+        if (useRedis)
+        {
+            var redisConn = cacheSection.GetValue<string>("RedisConnectionString");
+            if (!string.IsNullOrEmpty(redisConn))
+            {
+                builder.Services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = redisConn;
+                    options.InstanceName = redisInstanceName;
+                });
+            }
+        }
+
+        // Response Compression Configuration
+        var compressionSection = builder.Configuration.GetSection("CompressionSettings");
+        var enableCompression = compressionSection.GetValue<bool>("Enabled", true); // Default to true
+
+        if (enableCompression)
+        {
+            var enableForHttps = compressionSection.GetValue<bool>("EnableForHttps", true);
+            var compressionLevelStr = compressionSection.GetValue<string>("Level") ?? "Fastest";
+
+            // Parse Compression Level Enum
+            if (!Enum.TryParse(compressionLevelStr, true, out CompressionLevel compressionLevel))
+            {
+                compressionLevel = CompressionLevel.Fastest;
+            }
+
+            builder.Services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = enableForHttps;
+                options.Providers.Add<BrotliCompressionProvider>();
+                options.Providers.Add<GzipCompressionProvider>();
+                // Optional: Add MIME types if needed, defaults are usually fine for JSON/Text
+            });
+
+            // Configure Providers
+            builder.Services.Configure<BrotliCompressionProviderOptions>(options => 
+                options.Level = compressionLevel);
+            
+            builder.Services.Configure<GzipCompressionProviderOptions>(options => 
+                options.Level = compressionLevel);
+        }
+
         builder.Services.AddControllers()
             .AddNewtonsoftJson(options =>
             {
@@ -243,6 +303,13 @@ public class Program
         }
 
         app.UseHttpsRedirection();
+
+        // Enable Response Compression Middleware
+        if (enableCompression)
+        {
+            app.UseResponseCompression();
+        }
+
         app.UseRateLimiter();
         app.UseCors("AllowFrontend");
         app.UseAuthorization();
