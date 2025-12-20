@@ -108,21 +108,27 @@
 
 ## ⚙️ 环境配置
 
-配置通过 `appsettings.json` 或环境变量进行管理。
+配置通过 `appsettings.json` 或环境变量（使用双下划线 `__` 分隔层级）进行管理。
 
-| 配置项 | 环境变量 Key | 说明 |
-| :--- | :--- | :--- |
-| `DatabaseSettings:Type` | `DatabaseSettings__Type` | 数据库类型，支持 `SQLite`, `PgSQL`, `MySQL`。 |
-| `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | 数据库连接字符串。 |
-| `CacheSettings:Enabled` | `CacheSettings__Enabled` | **新增**。是否启用缓存（内存或 Redis）。默认为 `true`。 |
-| `CacheSettings:UseRedis` | `CacheSettings__UseRedis` | 是否启用 Redis 分布式缓存 (`true`/`false`)。默认为 `false` (使用内存缓存)。 |
-| `CacheSettings:RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis 连接字符串 (如 `localhost:6379`)。启用 Redis 时必填。 |
-| `CompressionSettings:Enabled` | `CompressionSettings__Enabled` | 是否启用 HTTP 响应压缩。默认为 `true`。 |
-| `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | 系统管理员用户名。 |
-| `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **必填**。系统管理员密码。 |
-| `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | 允许的前端域名列表（逗号分隔）。 |
-| `AssetSettings:MaxFileSizeMB` | `AssetSettings__MaxFileSizeMB` | 上传文件的最大大小（MB），默认 5MB。 |
-| `AssetSettings:AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | 允许上传的图片 MIME 类型列表。 |
+| 分类 | 配置项 | 环境变量 Key | 说明 | 默认值 |
+| :--- | :--- | :--- | :--- | :--- |
+| **数据库** | `Type` | `DatabaseSettings__Type` | 数据库类型：`SQLite`, `PgSQL`, `MySQL`。 | - |
+| | `ConnectionString` | `DatabaseSettings__ConnectionString` | 数据库连接字符串。 | - |
+| **认证** | `RootUsername` | `AuthSettings__RootUsername` | 系统 Root 管理员用户名。 | - |
+| | `RootPassword` | `AuthSettings__RootPassword` | **必填**。系统 Root 管理员密码（至少6位）。 | - |
+| **缓存** | `Enabled` | `CacheSettings__Enabled` | 是否启用缓存层。 | `true` |
+| | `UseRedis` | `CacheSettings__UseRedis` | 是否使用 Redis 分布式缓存。设为 false 则使用内存缓存。 | `false` |
+| | `RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis 连接字符串 (如 `localhost:6379`)。启用 Redis 时必填。 | - |
+| | `InstanceName` | `CacheSettings__InstanceName` | Redis 键前缀，用于隔离数据。 | `OpenBioCard:` |
+| | `ExpirationMinutes` | `CacheSettings__ExpirationMinutes` | 缓存条目的绝对过期时间（分钟）。 | `30` |
+| **限流** | `PermitLimit` | `RateLimitSettings__PermitLimit` | 每个时间窗口允许的最大请求数。 | `10` |
+| | `WindowMinutes` | `RateLimitSettings__WindowMinutes` | 时间窗口长度（分钟）。 | `1` |
+| | `QueueLimit` | `RateLimitSettings__QueueLimit` | 超过限制时允许排队的请求数。 | `0` |
+| **资源** | `MaxFileSizeMB` | `AssetSettings__MaxFileSizeMB` | 上传文件的最大大小（MB）。 | `5` |
+| | `AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | 允许上传的图片 MIME 类型数组。 | `["image/jpeg", ...]` |
+| **压缩** | `Enabled` | `CompressionSettings__Enabled` | 是否启用 Gzip/Brotli 响应压缩。 | `true` |
+| | `Level` | `CompressionSettings__Level` | 压缩级别：`Fastest` (最快), `Optimal` (最佳), `SmallestSize` (最小体积)。 | `Fastest` |
+| **跨域** | `AllowedOrigins` | `CorsSettings__AllowedOrigins` | 允许的前端域名（如 `https://example.com` 或 `*`）。 | `[]` |
 
 ## 🏗️ 部署指南
 

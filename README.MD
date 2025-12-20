@@ -108,21 +108,27 @@ It provides RESTful APIs compatible with the OpenBioCard frontend, allowing you 
 
 ## ⚙️ Environment Configuration
 
-Configuration is managed via `appsettings.json` or environment variables.
+Configuration is managed via `appsettings.json` or environment variables (using double underscores `__` as separators).
 
-| Setting | Environment Variable Key | Description |
-| :--- | :--- | :--- |
-| `DatabaseSettings:Type` | `DatabaseSettings__Type` | Database type, supports `SQLite`, `PgSQL`, `MySQL`. |
-| `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | Database connection string. |
-| `CacheSettings:Enabled` | `CacheSettings__Enabled` | **New**. Enable or disable all caching. Default is `true`. |
-| `CacheSettings:UseRedis` | `CacheSettings__UseRedis` | Enable Redis distributed cache (`true`/`false`). Default is `false` (Memory Cache). |
-| `CacheSettings:RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis connection string (e.g., `localhost:6379`). Required if UseRedis is true. |
-| `CompressionSettings:Enabled` | `CompressionSettings__Enabled` | Enable HTTP response compression. Default is `true`. |
-| `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | System admin username. |
-| `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **Required**. System admin password. |
-| `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | List of allowed frontend domains (comma-separated). |
-| `AssetSettings:MaxFileSizeMB` | `AssetSettings__MaxFileSizeMB` | Maximum upload file size (MB), default is 5MB. |
-| `AssetSettings:AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | List of allowed image MIME types for upload. |
+| Section | Setting | Environment Variable Key | Description | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| **Database** | `Type` | `DatabaseSettings__Type` | Database provider: `SQLite`, `PgSQL`, `MySQL`. | - |
+| | `ConnectionString` | `DatabaseSettings__ConnectionString` | Database connection string. | - |
+| **Auth** | `RootUsername` | `AuthSettings__RootUsername` | System root administrator username. | - |
+| | `RootPassword` | `AuthSettings__RootPassword` | **Required**. System root password (min 6 chars). | - |
+| **Cache** | `Enabled` | `CacheSettings__Enabled` | Enable/Disable caching layer. | `true` |
+| | `UseRedis` | `CacheSettings__UseRedis` | Use Redis distributed cache. If false, uses Memory Cache. | `false` |
+| | `RedisConnectionString` | `CacheSettings__RedisConnectionString` | Connection string (e.g., `localhost:6379`). Required if UseRedis is true. | - |
+| | `InstanceName` | `CacheSettings__InstanceName` | Redis key prefix to isolate data. | `OpenBioCard:` |
+| | `ExpirationMinutes` | `CacheSettings__ExpirationMinutes` | Absolute expiration time for cache entries. | `30` |
+| **Rate Limit**| `PermitLimit` | `RateLimitSettings__PermitLimit` | Max requests allowed per window. | `10` |
+| | `WindowMinutes` | `RateLimitSettings__WindowMinutes` | Time window duration in minutes. | `1` |
+| | `QueueLimit` | `RateLimitSettings__QueueLimit` | Max queued requests when limit is exceeded. | `0` |
+| **Assets** | `MaxFileSizeMB` | `AssetSettings__MaxFileSizeMB` | Maximum upload file size in MB. | `5` |
+| | `AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | JSON array of allowed MIME types. | `["image/jpeg", ...]` |
+| **Compression**| `Enabled` | `CompressionSettings__Enabled` | Enable Gzip/Brotli response compression. | `true` |
+| | `Level` | `CompressionSettings__Level` | Compression level: `Fastest`, `Optimal`, `NoCompression`, `SmallestSize`. | `Fastest` |
+| **CORS** | `AllowedOrigins` | `CorsSettings__AllowedOrigins` | Allowed origins (e.g., `https://example.com` or `*`). | `[]` |
 
 ## 🏗️ Deployment Guide
 
