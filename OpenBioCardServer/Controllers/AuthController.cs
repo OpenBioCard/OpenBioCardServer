@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using OpenBioCardServer.Constants;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Models.DTOs.Auth;
 using OpenBioCardServer.Models.Entities;
@@ -32,7 +33,7 @@ public class AuthController : ControllerBase
     /// 用户注册
     /// </summary>
     [HttpPost("signup")]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<ActionResult<TokenResponse>> SignUp([FromBody] SignUpRequest request)
     {
         using var transaction = await _context.Database.BeginTransactionAsync();
@@ -86,7 +87,7 @@ public class AuthController : ControllerBase
     /// 用户登录
     /// </summary>
     [HttpPost("signin")]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<ActionResult<TokenResponse>> SignIn([FromBody] SignInRequest request)
     {
         var account = await _authService.FindAccountByUsernameAsync(request.Username);

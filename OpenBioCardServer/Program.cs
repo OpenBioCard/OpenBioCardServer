@@ -12,7 +12,9 @@ using OpenBioCardServer.Services;
 using OpenBioCardServer.Utilities;
 using Microsoft.AspNetCore.ResponseCompression;
 using System.IO.Compression;
+using OpenBioCardServer.Constants;
 using OpenBioCardServer.Interfaces;
+using OpenBioCardServer.Structs.ENums;
 
 namespace OpenBioCardServer;
 
@@ -130,16 +132,94 @@ public class Program
 
     private static void ConfigureRateLimitingService(WebApplicationBuilder builder)
     {
-        var rateLimitSettings = builder.Configuration.GetSection(RateLimitSettings.SectionName).Get<RateLimitSettings>() ?? new RateLimitSettings();
+        var settings = builder.Configuration.GetSection(RateLimitSettings.SectionName).Get<RateLimitSettings>() ?? new RateLimitSettings();
+        
         builder.Services.AddRateLimiter(options =>
         {
-            options.AddFixedWindowLimiter(rateLimitSettings.PolicyName, limiterOptions =>
-            {
-                limiterOptions.Window = TimeSpan.FromMinutes(rateLimitSettings.WindowMinutes);
-                limiterOptions.PermitLimit = rateLimitSettings.PermitLimit;
-                limiterOptions.QueueLimit = rateLimitSettings.QueueLimit;
-            });
+            // 用于记录已注册的策略名称，防止重复注册或用于检测缺失
+            var registeredPolicies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // 注册配置文件中定义的策略
+            if (settings.Policies != null)
+            {
+                foreach (var policy in settings.Policies)
+                {
+                    if (registeredPolicies.Contains(policy.PolicyName)) continue;
+
+                    switch (policy.Type)
+                    {
+                        case RateLimiterType.FixedWindow:
+                            options.AddFixedWindowLimiter(policy.PolicyName, opt =>
+                            {
+                                opt.Window = TimeSpan.FromSeconds(policy.WindowSeconds);
+                                opt.PermitLimit = policy.PermitLimit;
+                                opt.QueueLimit = policy.QueueLimit;
+                                opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                            });
+                            break;
+
+                        case RateLimiterType.SlidingWindow:
+                            options.AddSlidingWindowLimiter(policy.PolicyName, opt =>
+                            {
+                                opt.Window = TimeSpan.FromSeconds(policy.WindowSeconds);
+                                opt.PermitLimit = policy.PermitLimit;
+                                opt.QueueLimit = policy.QueueLimit;
+                                opt.SegmentsPerWindow = policy.SegmentsPerWindow;
+                                opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                            });
+                            break;
+
+                        case RateLimiterType.TokenBucket:
+                            options.AddTokenBucketLimiter(policy.PolicyName, opt =>
+                            {
+                                opt.TokenLimit = policy.PermitLimit;
+                                opt.QueueLimit = policy.QueueLimit;
+                                opt.TokensPerPeriod = policy.TokensPerPeriod;
+                                opt.ReplenishmentPeriod = TimeSpan.FromSeconds(policy.ReplenishmentPeriodSeconds);
+                                opt.AutoReplenishment = true;
+                            });
+                            break;
+
+                        case RateLimiterType.Concurrency:
+                            options.AddConcurrencyLimiter(policy.PolicyName, opt =>
+                            {
+                                opt.PermitLimit = policy.PermitLimit;
+                                opt.QueueLimit = policy.QueueLimit;
+                                opt.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+                            });
+                            break;
+                    }
+                    registeredPolicies.Add(policy.PolicyName);
+                }
+            }
+
+            // 默认策略组
+            {
+                // 默认 Login 策略: 5次 / 分钟 (防暴力破解)
+                if (!registeredPolicies.Contains(RateLimitPolicies.Login))
+                {
+                    options.AddFixedWindowLimiter(RateLimitPolicies.Login, opt =>
+                    {
+                        opt.Window = TimeSpan.FromMinutes(1);
+                        opt.PermitLimit = 5;
+                        opt.QueueLimit = 0;
+                    });
+                }
+
+                // 默认 General 策略: 60次 / 分钟 (普通 API 保护)
+                if (!registeredPolicies.Contains(RateLimitPolicies.General))
+                {
+                    options.AddSlidingWindowLimiter(RateLimitPolicies.General, opt =>
+                    {
+                        opt.Window = TimeSpan.FromMinutes(1);
+                        opt.PermitLimit = 60;
+                        opt.SegmentsPerWindow = 6;
+                        opt.QueueLimit = 2;
+                    });
+                }
+            }
+
+            // 全局拒绝处理逻辑
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
