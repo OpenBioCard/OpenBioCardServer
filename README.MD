@@ -30,7 +30,7 @@ It provides RESTful APIs compatible with the OpenBioCard frontend, allowing you 
 
 ## ✨ Features
 
-- 🚀 **High Performance** - Built on the fast ASP.NET Core framework.
+- 🚀 **High Performance** - Built on ASP.NET Core with **Response Compression** (Brotli/Gzip) and **Multi-level Caching** (Memory/Redis) support.
 - 💾 **Flexible Storage** - Supports **SQLite**, **PostgreSQL**, and **MySQL**, easily switchable based on requirements.
 - 🛡️ **Security Protection** - Built-in login rate limiting (10 requests per minute) to prevent brute-force attacks.
 - 🐳 **Containerization** - Comprehensive Docker support for easy deployment.
@@ -114,6 +114,9 @@ Configuration is managed via `appsettings.json` or environment variables.
 | :--- | :--- | :--- |
 | `DatabaseSettings:Type` | `DatabaseSettings__Type` | Database type, supports `SQLite`, `PgSQL`, `MySQL`. |
 | `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | Database connection string. |
+| `CacheSettings:UseRedis` | `CacheSettings__UseRedis` | Enable Redis distributed cache (`true`/`false`). Default is `false` (Memory Cache). |
+| `CacheSettings:RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis connection string (e.g., `localhost:6379`). Required if UseRedis is true. |
+| `CompressionSettings:Enabled` | `CompressionSettings__Enabled` | Enable HTTP response compression. Default is `true`. |
 | `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | System admin username. |
 | `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **Required**. System admin password. |
 | `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | List of allowed frontend domains (comma-separated). |

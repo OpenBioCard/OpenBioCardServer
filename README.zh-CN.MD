@@ -30,7 +30,7 @@
 
 ## ✨ 功能特性
 
-- 🚀 **高性能** - 基于极速的 ASP.NET Core 框架构建。
+- 🚀 **高性能** - 基于极速的 ASP.NET Core 框架构建，集成 **响应压缩** (Brotli/Gzip) 与 **多级缓存** (内存/Redis) 机制。
 - 💾 **灵活存储** - 支持 **SQLite**、**PostgreSQL** 和 **MySQL**，可根据需求灵活切换。
 - 🛡️ **安全防护** - 内置登录接口限流保护（10次/分钟），防止暴力破解。
 - 🐳 **容器化** - 提供完善的 Docker 支持，部署轻松便捷。
@@ -114,6 +114,9 @@
 | :--- | :--- | :--- |
 | `DatabaseSettings:Type` | `DatabaseSettings__Type` | 数据库类型，支持 `SQLite`, `PgSQL`, `MySQL`。 |
 | `DatabaseSettings:ConnectionString` | `DatabaseSettings__ConnectionString` | 数据库连接字符串。 |
+| `CacheSettings:UseRedis` | `CacheSettings__UseRedis` | 是否启用 Redis 分布式缓存 (`true`/`false`)。默认为 `false` (使用内存缓存)。 |
+| `CacheSettings:RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis 连接字符串 (如 `localhost:6379`)。启用 Redis 时必填。 |
+| `CompressionSettings:Enabled` | `CompressionSettings__Enabled` | 是否启用 HTTP 响应压缩。默认为 `true`。 |
 | `AuthSettings:RootUsername` | `AuthSettings__RootUsername` | 系统管理员用户名。 |
 | `AuthSettings:RootPassword` | `AuthSettings__RootPassword` | **必填**。系统管理员密码。 |
 | `CorsSettings:AllowedOrigins` | `CorsSettings__AllowedOrigins` | 允许的前端域名列表（逗号分隔）。 |
