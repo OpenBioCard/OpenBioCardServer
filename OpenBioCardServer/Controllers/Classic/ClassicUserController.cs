@@ -24,6 +24,7 @@ public class ClassicUserController : ControllerBase
     private readonly IConfiguration _configuration;
     
     // 缓存配置字段
+    private readonly bool _isCacheEnabled;
     private readonly bool _useRedis;
     private readonly TimeSpan _absoluteExpiration; 
     private readonly TimeSpan _slidingExpiration; 
@@ -43,6 +44,7 @@ public class ClassicUserController : ControllerBase
         _configuration = configuration;
         
         // 读取缓存配置
+        _isCacheEnabled = configuration.GetValue<bool>("CacheSettings:Enabled", true);
         _useRedis = configuration.GetValue<bool>("CacheSettings:UseRedis");
         var absMinutes = configuration.GetValue<int>("CacheSettings:ExpirationMinutes", 5);
         var slideMinutes = configuration.GetValue<int>("CacheSettings:SlidingExpirationMinutes", 2);
@@ -70,32 +72,34 @@ public class ClassicUserController : ControllerBase
         ClassicProfile? cachedProfile = null;
         
         // 读取缓存
-        try
+        if (_isCacheEnabled)
         {
-            if (_useRedis && _distributedCache != null)
+            try
             {
-                // Redis: 读取字符串并反序列化
-                var jsonStr = await _distributedCache.GetStringAsync(cacheKey);
-                if (!string.IsNullOrEmpty(jsonStr))
+                if (_useRedis && _distributedCache != null)
                 {
-                    cachedProfile = JsonSerializer.Deserialize<ClassicProfile>(jsonStr);
+                    // Redis: 读取字符串并反序列化
+                    var jsonStr = await _distributedCache.GetStringAsync(cacheKey);
+                    if (!string.IsNullOrEmpty(jsonStr))
+                    {
+                        cachedProfile = JsonSerializer.Deserialize<ClassicProfile>(jsonStr);
+                    }
+                }
+                else
+                {
+                    // Memory: 直接读取对象引用
+                    _memoryCache.TryGetValue(cacheKey, out cachedProfile);
+                }
+                if (cachedProfile != null)
+                {
+                    return Ok(cachedProfile);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                // Memory: 直接读取对象引用
-                _memoryCache.TryGetValue(cacheKey, out cachedProfile);
-            }
-            if (cachedProfile != null)
-            {
-                return Ok(cachedProfile);
+                _logger.LogWarning(ex, "Cache read failed for {Key}", cacheKey);
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Cache read failed for {Key}", cacheKey);
-        }
-
         
         try
         {
@@ -118,29 +122,32 @@ public class ClassicUserController : ControllerBase
             var classicProfile = ClassicMapper.ToClassicProfile(profile);
             
             // 写入缓存
-            try 
+            if (_isCacheEnabled)
             {
-                if (_useRedis && _distributedCache != null)
+                try 
                 {
-                    // Redis: 序列化为 JSON 存储
-                    var jsonStr = JsonSerializer.Serialize(classicProfile);
-                    await _distributedCache.SetStringAsync(cacheKey, jsonStr, new DistributedCacheEntryOptions
+                    if (_useRedis && _distributedCache != null)
                     {
-                        AbsoluteExpirationRelativeToNow = _absoluteExpiration
-                    });
+                        // Redis: 序列化为 JSON 存储
+                        var jsonStr = JsonSerializer.Serialize(classicProfile);
+                        await _distributedCache.SetStringAsync(cacheKey, jsonStr, new DistributedCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = _absoluteExpiration
+                        });
+                    }
+                    else
+                    {
+                        // Memory: 存储对象引用 (带 Size 限制)
+                        _memoryCache.Set(cacheKey, classicProfile, new MemoryCacheEntryOptions()
+                            .SetAbsoluteExpiration(_absoluteExpiration)
+                            .SetSlidingExpiration(_slidingExpiration)
+                            .SetSize(1));
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Memory: 存储对象引用 (带 Size 限制)
-                    _memoryCache.Set(cacheKey, classicProfile, new MemoryCacheEntryOptions()
-                        .SetAbsoluteExpiration(_absoluteExpiration)
-                        .SetSlidingExpiration(_slidingExpiration)
-                        .SetSize(1));
+                    _logger.LogError(ex, "Cache write failed for {Key}", cacheKey);
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Cache write failed for {Key}", cacheKey);
             }
 
             return Ok(classicProfile);
@@ -260,21 +267,24 @@ public class ClassicUserController : ControllerBase
             await transaction.CommitAsync();
             
             // 清除缓存
-            string cacheKey = GetProfileCacheKey(username);
-            try 
+            if (_isCacheEnabled)
             {
-                if (_useRedis && _distributedCache != null)
+                string cacheKey = GetProfileCacheKey(username);
+                try 
                 {
-                    await _distributedCache.RemoveAsync(cacheKey);
+                    if (_useRedis && _distributedCache != null)
+                    {
+                        await _distributedCache.RemoveAsync(cacheKey);
+                    }
+                    else
+                    {
+                        _memoryCache.Remove(cacheKey);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    _memoryCache.Remove(cacheKey);
+                    _logger.LogError(ex, "Cache removal failed for {Key}", cacheKey);
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Cache removal failed for {Key}", cacheKey);
             }
 
             _logger.LogInformation("Profile updated for user: {Username}", username);
