@@ -108,26 +108,32 @@ It provides RESTful APIs compatible with the OpenBioCard frontend, allowing you 
 
 ## ⚙️ Environment Configuration
 
-Configuration is managed via `appsettings.json` or environment variables (using double underscores `__` as separators).
+Configuration is managed via `appsettings.json` or environment variables.
+For environment variables, use double underscores `__` to separate sections (e.g., `CacheSettings__Enabled`).
 
-| Section | Setting | Environment Variable Key | Description | Default |
+| Section | Setting | Env Variable Key | Description | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | **Database** | `Type` | `DatabaseSettings__Type` | Database provider: `SQLite`, `PgSQL`, `MySQL`. | - |
 | | `ConnectionString` | `DatabaseSettings__ConnectionString` | Database connection string. | - |
 | **Auth** | `RootUsername` | `AuthSettings__RootUsername` | System root administrator username. | - |
 | | `RootPassword` | `AuthSettings__RootPassword` | **Required**. System root password (min 6 chars). | - |
-| **Cache** | `Enabled` | `CacheSettings__Enabled` | Enable/Disable caching layer. | `true` |
-| | `UseRedis` | `CacheSettings__UseRedis` | Use Redis distributed cache. If false, uses Memory Cache. | `false` |
-| | `RedisConnectionString` | `CacheSettings__RedisConnectionString` | Connection string (e.g., `localhost:6379`). Required if UseRedis is true. | - |
+| **Cache** | `Enabled` | `CacheSettings__Enabled` | Master switch to enable/disable caching. | `true` |
+| | `UseRedis` | `CacheSettings__UseRedis` | Use Redis distributed cache (`true`) or Memory cache (`false`). | `false` |
+| | `RedisConnectionString` | `CacheSettings__RedisConnectionString` | Redis connection string (Required if UseRedis is true). | - |
 | | `InstanceName` | `CacheSettings__InstanceName` | Redis key prefix to isolate data. | `OpenBioCard:` |
-| | `ExpirationMinutes` | `CacheSettings__ExpirationMinutes` | Absolute expiration time for cache entries. | `30` |
-| **Rate Limit**| `PermitLimit` | `RateLimitSettings__PermitLimit` | Max requests allowed per window. | `10` |
+| | `CacheSizeLimit` | `CacheSettings__CacheSizeLimit` | Max entry count for Memory Cache (not bytes). | `null` |
+| | `ExpirationMinutes` | `CacheSettings__ExpirationMinutes` | Absolute expiration time in minutes. | `30` |
+| | `SlidingExpirationMinutes` | `CacheSettings__SlidingExpirationMinutes` | Reset expiration if accessed within this time. | `5` |
+| | `CompactionPercentage` | `CacheSettings__CompactionPercentage` | Percentage (0.0-1.0) of cache to compact when full. | `0.2` |
+| **Compression**| `Enabled` | `CompressionSettings__Enabled` | Enable Gzip/Brotli response compression. | `true` |
+| | `EnableForHttps` | `CompressionSettings__EnableForHttps` | Secure CRIME/BREACH protection flag. | `true` |
+| | `Level` | `CompressionSettings__Level` | Level: `Fastest`, `Optimal`, `NoCompression`, `SmallestSize`. | `Fastest` |
+| **Rate Limit**| `PolicyName` | `RateLimitSettings__PolicyName` | Name of the rate limit policy. | `login` |
+| | `PermitLimit` | `RateLimitSettings__PermitLimit` | Max requests allowed per window. | `10` |
 | | `WindowMinutes` | `RateLimitSettings__WindowMinutes` | Time window duration in minutes. | `1` |
 | | `QueueLimit` | `RateLimitSettings__QueueLimit` | Max queued requests when limit is exceeded. | `0` |
 | **Assets** | `MaxFileSizeMB` | `AssetSettings__MaxFileSizeMB` | Maximum upload file size in MB. | `5` |
-| | `AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | JSON array of allowed MIME types. | `["image/jpeg", ...]` |
-| **Compression**| `Enabled` | `CompressionSettings__Enabled` | Enable Gzip/Brotli response compression. | `true` |
-| | `Level` | `CompressionSettings__Level` | Compression level: `Fastest`, `Optimal`, `NoCompression`, `SmallestSize`. | `Fastest` |
+| | `AllowedImageTypes` | `AssetSettings__AllowedImageTypes` | List of allowed MIME types (JSON array in `appsettings`). | `["image/jpeg", ...]` |
 | **CORS** | `AllowedOrigins` | `CorsSettings__AllowedOrigins` | Allowed origins (e.g., `https://example.com` or `*`). | `[]` |
 
 ## 🏗️ Deployment Guide
