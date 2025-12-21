@@ -1,0 +1,109 @@
+name: Manual .NET Build (Artifacts)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_rids:
+        description: 'Target RIDs (comma separated). E.g: linux-x64, win-x64, osx-arm64'
+        required: true
+        default: 'linux-x64, win-x64'
+        type: string
+      
+      build_configs:
+        description: 'Configurations (comma separated). E.g: Release, Debug'
+        required: true
+        default: 'Release'
+        type: string
+
+      is_self_contained:
+        description: 'Self Contained? (Includes .NET Runtime, larger size but no install required)'
+        required: true
+        type: boolean
+        default: true
+
+      is_single_file:
+        description: 'Publish as Single File? (Cleaner output)'
+        required: true
+        type: boolean
+        default: false
+
+env:
+  PROJECT_PATH: ./OpenBioCardServer/OpenBioCardServer.csproj
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build-matrix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Release Branch
+        uses: actions/checkout@v4
+        with:
+          ref: release
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore Dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      # 核心逻辑：解析逗号分隔的输入，循环构建
+      - name: Build and Publish Loop
+        id: build_step
+        shell: bash
+        run: |
+          IFS=',' read -ra RIDS <<< "${{ inputs.target_rids }}"
+          IFS=',' read -ra CONFIGS <<< "${{ inputs.build_configs }}"
+          
+          SELF_CONTAINED=""
+          if [ "${{ inputs.is_self_contained }}" == "true" ]; then
+            SELF_CONTAINED="--self-contained true"
+          else
+            SELF_CONTAINED="--self-contained false"
+          fi
+
+          SINGLE_FILE=""
+          if [ "${{ inputs.is_single_file }}" == "true" ]; then
+            SINGLE_FILE="-p:PublishSingleFile=true"
+          fi
+
+          mkdir -p ./artifacts
+
+          for rid in "${RIDS[@]}"; do
+            rid=$(echo $rid | xargs)
+            
+            for config in "${CONFIGS[@]}"; do
+              config=$(echo $config | xargs)
+              
+              echo "---------------------------------------------------"
+              echo "🚀 Building for: RID=[$rid] | Config=[$config]"
+              echo "---------------------------------------------------"
+              
+              OUT_NAME="OpenBioCardServer-${rid}-${config}"
+              OUT_DIR="./build_temp/${OUT_NAME}"
+              
+              dotnet publish ${{ env.PROJECT_PATH }} \
+                -c $config \
+                -r $rid \
+                $SELF_CONTAINED \
+                $SINGLE_FILE \
+                -o $OUT_DIR
+              
+              cd ./build_temp
+              zip -r "../artifacts/${OUT_NAME}.zip" "${OUT_NAME}"
+              cd ..
+              
+              echo "✅ Created: ./artifacts/${OUT_NAME}.zip"
+            done
+          done
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenBioCard-Builds
+          path: ./artifacts/*.zip
+          retention-days: 5
