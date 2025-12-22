@@ -47,12 +47,12 @@ public class ClassicSettingsController : ControllerBase
     {
         try
         {
-            var response = await _cache.GetOrSetAsync<ClassicSystemSettingsResponse>(
+            var response = await _cache.GetOrSetAsync<ClassicPublicSettingsResponse>(
                 PublicSettingsCacheKey, 
                 async (ctx, token) =>
                 {
                     var settings = await _context.SystemSettings.FindAsync(new object[] { 1 }, token);
-                    return new ClassicSystemSettingsResponse
+                    return new ClassicPublicSettingsResponse
                     {
                         Title = settings?.Title ?? "OpenBioCard",
                         Logo = settings?.LogoType.HasValue == true
