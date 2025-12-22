@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OpenBioCardServer.Constants;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Models.DTOs.Classic;
 using OpenBioCardServer.Utilities.Mappers;
@@ -22,15 +23,12 @@ public class ClassicProfileService
         _logger = logger;
     }
 
-    private static string GetProfileCacheKey(string username) => 
-        $"Classic:Profile:{username.Trim().ToLowerInvariant()}";
-
     /// <summary>
     /// 获取用户 Profile
     /// </summary>
     public async Task<ClassicProfile?> GetProfileAsync(string username)
     {
-        var cacheKey = GetProfileCacheKey(username);
+        var cacheKey = CacheKeys.GetClassicProfileCacheKey(username);
 
         return await _cache.GetOrSetAsync<ClassicProfile?>(
             cacheKey, 
@@ -164,7 +162,7 @@ public class ClassicProfileService
             await transaction.CommitAsync();
 
             // 4. Invalidate Cache
-            await _cache.RemoveAsync(GetProfileCacheKey(username));
+            await _cache.RemoveAsync(CacheKeys.GetClassicProfileCacheKey(username));
             
             _logger.LogInformation("Profile updated successfully for user: {Username}", username);
             return true;

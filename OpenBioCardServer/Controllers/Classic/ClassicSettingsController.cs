@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using OpenBioCardServer.Constants;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Interfaces;
 using OpenBioCardServer.Models.DTOs.Classic;
@@ -23,9 +24,6 @@ public class ClassicSettingsController : ControllerBase
     private readonly IFusionCache _cache;
     private readonly ILogger<ClassicSettingsController> _logger;
     
-    // 缓存 Key 常量
-    private const string PublicSettingsCacheKey = "Classic:System:Settings:Public";
-
     public ClassicSettingsController(
         AppDbContext context,
         ClassicAuthService authService,
@@ -48,7 +46,7 @@ public class ClassicSettingsController : ControllerBase
         try
         {
             var response = await _cache.GetOrSetAsync<ClassicPublicSettingsResponse>(
-                PublicSettingsCacheKey, 
+                CacheKeys.ClassicPublicSettingsCacheKey, 
                 async (ctx, token) =>
                 {
                     var settings = await _context.SystemSettings.FindAsync(new object[] { 1 }, token);
@@ -181,7 +179,7 @@ public class ClassicSettingsController : ControllerBase
             await _context.SaveChangesAsync();
 
             // 更新成功后清除公共设置的缓存以确保前端获取到最新数据
-            await _cache.RemoveAsync(PublicSettingsCacheKey);
+            await _cache.RemoveAsync(CacheKeys.ClassicPublicSettingsCacheKey);
 
             _logger.LogInformation("Admin {Username} updated system settings", request.Username);
 

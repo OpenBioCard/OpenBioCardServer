@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OpenBioCardServer.Constants;
 using OpenBioCardServer.Data;
 using OpenBioCardServer.Models.DTOs;
 using OpenBioCardServer.Models.Entities;
@@ -23,16 +24,12 @@ public class ProfileService
         _logger = logger;
     }
 
-    // 生成统一的 Cache Key
-    private static string GetProfileCacheKey(string username) => 
-        $"Profile:{username.Trim().ToLowerInvariant()}";
-
     /// <summary>
     /// 获取用户资料
     /// </summary>
     public async Task<ProfileDto?> GetProfileAsync(string username)
     {
-        string cacheKey = GetProfileCacheKey(username);
+        string cacheKey = CacheKeys.GetProfileCacheKey(username);
 
         return await _cacheService.GetOrSetAsync<ProfileDto?>(
             cacheKey, 
@@ -103,7 +100,7 @@ public class ProfileService
             await transaction.CommitAsync();
 
             // Invalidate cache
-            await _cacheService.RemoveAsync(GetProfileCacheKey(username));
+            await _cacheService.RemoveAsync(CacheKeys.GetProfileCacheKey(username));
 
             _logger.LogInformation("Profile updated for user: {Username}", username);
             return true;
