@@ -72,7 +72,7 @@ public class ClassicUserController : ControllerBase
 
         if (account.UserName != username)
         {
-            return Unauthorized(new ClassicErrorResponse("Token does not match username"));
+            return Unauthorized(new ClassicErrorResponse("Invalid token"));
         }
 
         try
@@ -115,7 +115,7 @@ public class ClassicUserController : ControllerBase
 
         if (account.UserName != username)
         {
-            return Unauthorized(new ClassicErrorResponse("Token does not match username"));
+            return Unauthorized(new ClassicErrorResponse("Invalid token"));
         }
 
         try
@@ -158,7 +158,7 @@ public class ClassicUserController : ControllerBase
 
         if (account.UserName != username)
         {
-            return Unauthorized(new ClassicErrorResponse("Token does not match username"));
+            return Unauthorized(new ClassicErrorResponse("Invalid token"));
         }
 
         try

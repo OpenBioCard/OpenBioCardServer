@@ -203,7 +203,7 @@ public class ClassicAuthController : ControllerBase
 
             if (account.UserName != request.Username)
             {
-                return Unauthorized(new ClassicErrorResponse("Token does not match username"));
+                return Unauthorized(new ClassicErrorResponse("Invalid token"));
             }
 
             // Root account cannot be deleted
