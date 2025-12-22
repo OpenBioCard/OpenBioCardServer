@@ -51,7 +51,7 @@ public class ClassicAdminController : ControllerBase
 
             if (account.UserName != request.Username)
             {
-                return Unauthorized(new ClassicErrorResponse("Token does not match username"));
+                return Unauthorized(new ClassicErrorResponse("Invalid token"));
             }
 
             if (!await _authService.HasAdminPermissionAsync(account))

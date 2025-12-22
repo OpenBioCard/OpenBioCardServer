@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using OpenBioCardServer.Constants;
 using OpenBioCardServer.Models.DTOs.Classic;
 using OpenBioCardServer.Models.DTOs.Classic.General;
 using OpenBioCardServer.Models.DTOs.Classic.Profile;
@@ -94,6 +96,7 @@ public class ClassicUserController : ControllerBase
     /// Export user data (requires authentication)
     /// </summary>
     [HttpGet("{username}/export")]
+    [EnableRateLimiting(RateLimitPolicies.General)]
     public async Task<IActionResult> ExportData(string username)
     {
         var token = GetTokenFromHeader();
