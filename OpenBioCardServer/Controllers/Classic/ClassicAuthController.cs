@@ -17,7 +17,6 @@ public class ClassicAuthController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ClassicAuthService _authService;
-    private readonly IConfiguration _config;
     private readonly ILogger<ClassicAuthController> _logger;
 
     public ClassicAuthController(
@@ -28,7 +27,6 @@ public class ClassicAuthController : ControllerBase
     {
         _context = context;
         _authService = authService;
-        _config = config;
         _logger = logger;
     }
 
