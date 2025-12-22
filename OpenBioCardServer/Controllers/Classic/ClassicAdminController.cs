@@ -30,6 +30,7 @@ public class ClassicAdminController : ControllerBase
     {
         _context = context;
         _authService = authService;
+        _cache = cache;
         _logger = logger;
     }
 
