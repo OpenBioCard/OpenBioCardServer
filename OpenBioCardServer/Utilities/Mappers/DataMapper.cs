@@ -13,11 +13,11 @@ public static class DataMapper
     {
         var dto = new ProfileDto
         {
-            Username = profile.Username,
+            Username = profile.UserName,
             Avatar = ToAssetDto(profile.AvatarType, profile.AvatarText, profile.AvatarData),
-            NickName = profile.NickName,
+            NickName = profile.Nickname,
             Pronouns = profile.Pronouns,
-            Description = profile.Description,
+            Description = profile.Biography,
             Location = profile.Location,
             Website = profile.Website,
             Background = profile.BackgroundType.HasValue
@@ -127,10 +127,10 @@ public static class DataMapper
     
     public static void UpdateProfileEntity(ProfileEntity entity, ProfileDto dto)
     {
-        entity.Username = dto.Username;
-        entity.NickName = dto.NickName;
+        entity.UserName = dto.Username;
+        entity.Nickname = dto.NickName;
         entity.Pronouns = dto.Pronouns;
-        entity.Description = dto.Description;
+        entity.Biography = dto.Description;
         entity.Location = dto.Location;
         entity.Website = dto.Website;
         entity.CurrentCompany = dto.CurrentCompany;

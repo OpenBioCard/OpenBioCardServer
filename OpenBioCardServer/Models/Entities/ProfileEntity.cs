@@ -16,22 +16,22 @@ public class ProfileEntity
     
     [Required]
     [MaxLength(64)]
-    public string Username { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
     
     // Avatar (required Asset) - 扁平化存储
     public AssetType AvatarType { get; set; } = AssetType.Text;
-    [MaxLength(512)]
-    public string? AvatarText { get; set; }
+    [MaxLength(512)] public string? AvatarTag { get; set; }
+    [MaxLength(512)] public string? AvatarText { get; set; }
     public byte[]? AvatarData { get; set; }
     
     [MaxLength(128)]
-    public string? NickName { get; set; }
+    public string? Nickname { get; set; }
     
     [MaxLength(64)]
     public string? Pronouns { get; set; }
     
     [MaxLength(2000)]
-    public string? Description { get; set; } // Bio
+    public string? Biography { get; set; } // Bio
     
     [MaxLength(256)]
     public string? Location { get; set; }
@@ -41,8 +41,8 @@ public class ProfileEntity
     
     // Background (optional Asset)
     public AssetType? BackgroundType { get; set; }
-    [MaxLength(512)]
-    public string? BackgroundText { get; set; }
+    [MaxLength(64)] public string? BackgroundTag { get; set; }
+    [MaxLength(512)] public string? BackgroundText { get; set; }
     public byte[]? BackgroundData { get; set; }
     
     [MaxLength(256)]

@@ -23,8 +23,8 @@ public class ProjectItemEntity
     
     // Logo Asset (optional)
     public AssetType? LogoType { get; set; }
-    [MaxLength(512)]
-    public string? LogoText { get; set; }
+    [MaxLength(64)] public string? LogoTag { get; set; }
+    [MaxLength(512)] public string? LogoText { get; set; }
     public byte[]? LogoData { get; set; }
     
     // Navigation property

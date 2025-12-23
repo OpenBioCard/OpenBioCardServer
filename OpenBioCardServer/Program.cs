@@ -423,7 +423,7 @@ public class Program
                     UserName = authSettings.RootUsername,
                     PasswordHash = hash,
                     PasswordSalt = salt,
-                    Type = UserType.Root
+                    Role = UserRole.Root
                 };
                 context.Accounts.Add(rootAccount);
                 await context.SaveChangesAsync();

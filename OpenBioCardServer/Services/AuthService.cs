@@ -53,7 +53,7 @@ public class AuthService
         return string.IsNullOrEmpty(rootUsername) 
             ? null 
             : await _context.Accounts
-                .FirstOrDefaultAsync(a => a.UserName == rootUsername && a.Type == UserType.Root);
+                .FirstOrDefaultAsync(a => a.UserName == rootUsername && a.Role == UserRole.Root);
     }
 
     public async Task<string> CreateTokenAsync(Account account)
@@ -82,7 +82,7 @@ public class AuthService
         {
             TokenValue = tokenValue,
             AccountId = account.Id,
-            DeviceInfo = account.Type == UserType.Root ? "Root Login" : null,
+            DeviceInfo = account.Role == UserRole.Root ? "Root Login" : null,
             ExpiresAt = DateTime.UtcNow.AddDays(7)
         };
 
@@ -94,7 +94,7 @@ public class AuthService
 
 
     public async Task<bool> HasAdminPermissionAsync(Account account) =>
-        account.Type == UserType.Admin || account.Type == UserType.Root;
+        account.Role == UserRole.Admin || account.Role == UserRole.Root;
 
     public async Task<Account?> FindAccountByUsernameAsync(string username) =>
         await _context.Accounts
@@ -103,7 +103,7 @@ public class AuthService
     public async Task<bool> UsernameExistsAsync(string username) =>
         await _context.Accounts.AnyAsync(a => a.UserName == username);
 
-    public async Task<Account> CreateAccountAsync(string username, string password, UserType type)
+    public async Task<Account> CreateAccountAsync(string username, string password, UserRole role)
     {
         var (hash, salt) = PasswordHasher.HashPassword(password);
         
@@ -112,7 +112,7 @@ public class AuthService
             UserName = username,
             PasswordHash = hash,
             PasswordSalt = salt,
-            Type = type
+            Role = role
         };
 
         _context.Accounts.Add(account);
@@ -126,7 +126,7 @@ public class AuthService
         var profile = new ProfileEntity
         {
             AccountId = accountId,
-            Username = username,
+            UserName = username,
             AvatarType = AssetType.Text,
             AvatarText = "👤"
         };

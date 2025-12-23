@@ -1,13 +1,17 @@
+using OpenBioCardServer.Models.Enums;
+
 namespace OpenBioCardServer.Models;
 
 public class Profile
 {
     public string UserName { get; set; } = string.Empty;
+    public UserRole  UserRole { get; set; } =  UserRole.User;
+    public AccountType UserType { get; set; } = AccountType.Personal;
     
     public Asset Avatar { get; set; } = new();
-    public string? NickName { get; set; }
+    public string? Nickname { get; set; }
     public string? Pronouns { get; set; }
-    public string? Description { get; set; } // BIO
+    public string? Biography { get; set; } // BIO
     public string? Location { get; set; }
     public string? Website { get; set; }
     public Asset? Background { get; set; }

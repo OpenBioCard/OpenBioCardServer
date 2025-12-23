@@ -13,8 +13,8 @@ public class GalleryItemEntity
     
     // Image Asset (optional but expected)
     public AssetType? ImageType { get; set; }
-    [MaxLength(512)]
-    public string? ImageText { get; set; }
+    [MaxLength(64)] public string? ImageTag { get; set; }
+    [MaxLength(512)] public string? ImageText { get; set; }
     public byte[]? ImageData { get; set; }
     
     [MaxLength(500)]

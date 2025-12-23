@@ -21,7 +21,8 @@ public class Account
     [MaxLength(256)]
     public string PasswordSalt { get; set; } = string.Empty;
 
-    public UserType Type { get; set; } = UserType.User;
+    public UserRole Role { get; set; } = UserRole.User;
+    public AccountType Type { get; set; } = AccountType.Personal;
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastLogin { get; set; } = DateTime.UtcNow;

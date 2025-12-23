@@ -58,13 +58,13 @@ public class ClassicAuthController : ControllerBase
             }
 
             // Validate and parse user type
-            if (!Enum.TryParse<UserType>(request.Type, true, out var userType))
+            if (!Enum.TryParse<UserRole>(request.Type, true, out var userType))
             {
                 return BadRequest(new ClassicErrorResponse("Invalid user type"));
             }
 
             // Cannot create root users via signup
-            if (userType == UserType.Root)
+            if (userType == UserRole.Root)
             {
                 return StatusCode(403, new ClassicErrorResponse("Cannot create root users"));
             }
@@ -76,7 +76,7 @@ public class ClassicAuthController : ControllerBase
                 UserName = request.Username,
                 PasswordHash = hash,
                 PasswordSalt = salt,
-                Type = userType
+                Role = userType
             };
 
             _context.Accounts.Add(account);
@@ -86,7 +86,7 @@ public class ClassicAuthController : ControllerBase
             var profile = new ProfileEntity
             {
                 AccountId = account.Id,
-                Username = request.Username,
+                UserName = request.Username,
                 AvatarType = AssetType.Text,
                 AvatarText = "👤"
             };
@@ -167,14 +167,14 @@ public class ClassicAuthController : ControllerBase
             await _context.SaveChangesAsync();
 
             // 记录日志（区分Root和普通用户）
-            if (account.Type == UserType.Root)
+            if (account.Role == UserRole.Root)
             {
                 _logger.LogInformation("Root user logged in");
             }
             else
             {
                 _logger.LogInformation("User logged in: {Username} (Type: {Type})", 
-                    request.Username, account.Type);
+                    request.Username, account.Role);
             }
 
             return Ok(new ClassicTokenResponse { Token = token });
@@ -207,7 +207,7 @@ public class ClassicAuthController : ControllerBase
             }
 
             // Root account cannot be deleted
-            if (account.Type == UserType.Root)
+            if (account.Role == UserRole.Root)
             {
                 return StatusCode(403, new ClassicErrorResponse("Cannot delete root account"));
             }

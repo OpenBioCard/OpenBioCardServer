@@ -62,7 +62,7 @@ public class ClassicAdminController : ControllerBase
             return Ok(new ClassicCheckPermissionResponse
             { 
                 Success = true, 
-                Type = account.Type.ToString().ToLower() 
+                Type = account.Role.ToString().ToLower() 
             });
         }
         catch (Exception ex)
@@ -118,11 +118,11 @@ public class ClassicAdminController : ControllerBase
 
             // Get all non-root users
             var users = await _context.Accounts
-                .Where(a => a.Type != UserType.Root)
+                .Where(a => a.Role != UserRole.Root)
                 .Select(a => new ClassicUserInfo
                 {
                     Username = a.UserName,
-                    Type = a.Type.ToString().ToLower()
+                    Type = a.Role.ToString().ToLower()
                 })
                 .ToListAsync();
 
@@ -163,13 +163,13 @@ public class ClassicAdminController : ControllerBase
             }
 
             // Validate new user type
-            if (!Enum.TryParse<UserType>(request.Type, true, out var userType))
+            if (!Enum.TryParse<UserRole>(request.Type, true, out var userType))
             {
                 return BadRequest(new ClassicErrorResponse("Invalid user type"));
             }
 
             // Cannot create root users
-            if (userType == UserType.Root)
+            if (userType == UserRole.Root)
             {
                 return StatusCode(403, new ClassicErrorResponse("Cannot create root users"));
             }
@@ -187,7 +187,7 @@ public class ClassicAdminController : ControllerBase
                 UserName = request.NewUsername,
                 PasswordHash = hash,
                 PasswordSalt = salt,
-                Type = userType
+                Role = userType
             };
 
             _context.Accounts.Add(newAccount);
@@ -197,7 +197,7 @@ public class ClassicAdminController : ControllerBase
             var profile = new ProfileEntity
             {
                 AccountId = newAccount.Id,
-                Username = request.NewUsername,
+                UserName = request.NewUsername,
                 AvatarType = AssetType.Text,
                 AvatarText = "👤"
             };
@@ -267,7 +267,7 @@ public class ClassicAdminController : ControllerBase
             }
 
             // Cannot delete root account
-            if (targetAccount.Type == UserType.Root)
+            if (targetAccount.Role == UserRole.Root)
             {
                 return StatusCode(403, new ClassicErrorResponse("Cannot delete root account"));
             }

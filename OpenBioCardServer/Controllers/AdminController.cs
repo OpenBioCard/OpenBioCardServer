@@ -49,7 +49,7 @@ public class AdminController : ControllerBase
         return Ok(new 
         { 
             Success = true, 
-            Type = account.Type.ToString().ToLower() 
+            Type = account.Role.ToString().ToLower() 
         });
     }
 
@@ -67,11 +67,11 @@ public class AdminController : ControllerBase
         }
 
         var users = await _context.Accounts
-            .Where(a => a.Type != UserType.Root)
+            .Where(a => a.Role != UserRole.Root)
             .Select(a => new UserInfoDto
             {
                 Username = a.UserName,
-                Type = a.Type.ToString().ToLower()
+                Type = a.Role.ToString().ToLower()
             })
             .ToListAsync();
 
@@ -96,7 +96,7 @@ public class AdminController : ControllerBase
                 return Unauthorized(new { Error = "Invalid token or insufficient permissions" });
             }
 
-            if (!Enum.TryParse<UserType>(request.Type, true, out var userType) || userType == UserType.Root)
+            if (!Enum.TryParse<UserRole>(request.Type, true, out var userType) || userType == UserRole.Root)
             {
                 return BadRequest(new { Error = "Invalid user type" });
             }
@@ -151,7 +151,7 @@ public class AdminController : ControllerBase
             return NotFound(new { Error = "User not found" });
         }
 
-        if (targetAccount.Type == UserType.Root)
+        if (targetAccount.Role == UserRole.Root)
         {
             return Forbid("Cannot delete root account");
         }

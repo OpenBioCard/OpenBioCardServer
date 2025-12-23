@@ -44,7 +44,7 @@ public class ClassicProfileService
                     .Include(p => p.WorkExperiences)
                     .Include(p => p.SchoolExperiences)
                     .Include(p => p.Gallery)
-                    .FirstOrDefaultAsync(p => p.Username == username, token);
+                    .FirstOrDefaultAsync(p => p.UserName == username, token);
                 return profile == null ? null : ClassicMapper.ToClassicProfile(profile);
             });
     }
@@ -68,7 +68,7 @@ public class ClassicProfileService
             User = new ClassicUserExportDto
             {
                 Username = account.UserName,
-                Type = account.Type.ToString().ToLowerInvariant(),
+                Type = account.Role.ToString().ToLowerInvariant(),
                 Token = currentToken
             },
             Profile = profileDto
@@ -102,7 +102,7 @@ public class ClassicProfileService
         {
             var profile = await _context.Profiles
                 .AsTracking()
-                .FirstOrDefaultAsync(p => p.Username == username);
+                .FirstOrDefaultAsync(p => p.UserName == username);
 
             if (profile == null)
             {
@@ -187,7 +187,7 @@ public class ClassicProfileService
         {
             var profile = await _context.Profiles
                 .AsTracking()
-                .FirstOrDefaultAsync(p => p.Username == username);
+                .FirstOrDefaultAsync(p => p.UserName == username);
 
             if (profile == null)
             {

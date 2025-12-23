@@ -13,11 +13,11 @@ public static class ClassicMapper
     {
         return new ClassicProfile
         {
-            Username = profile.Username,
-            Name = profile.NickName ?? string.Empty,
+            Username = profile.UserName,
+            Name = profile.Nickname ?? string.Empty,
             Pronouns = profile.Pronouns ?? string.Empty,
             Avatar = AssetToString(profile.AvatarType, profile.AvatarText, profile.AvatarData),
-            Bio = profile.Description ?? string.Empty,
+            Bio = profile.Biography ?? string.Empty,
             Location = profile.Location ?? string.Empty,
             Website = profile.Website ?? string.Empty,
             Background = profile.BackgroundType.HasValue 
@@ -177,8 +177,8 @@ public static class ClassicMapper
 
     public static void UpdateProfileFromClassic(ProfileEntity profile, ClassicProfile classic)
     {
-        profile.Username = classic.Username;
-        profile.NickName = classic.Name;
+        profile.UserName = classic.Username;
+        profile.Nickname = classic.Name;
         profile.Pronouns = classic.Pronouns;
         
         // Avatar
@@ -187,7 +187,7 @@ public static class ClassicMapper
         profile.AvatarText = avatarText;
         profile.AvatarData = avatarData;
 
-        profile.Description = classic.Bio;
+        profile.Biography = classic.Bio;
         profile.Location = classic.Location;
         profile.Website = classic.Website;
 
@@ -366,8 +366,8 @@ public static class ClassicMapper
         // 仅当字段不为 Null 时更新
         // 注意：如果前端传空字符串 ""，这里会更新为空字符串，符合预期（清空字段）
         
-        if (patch.Username != null) profile.Username = patch.Username;
-        if (patch.Name != null) profile.NickName = patch.Name;
+        if (patch.Username != null) profile.UserName = patch.Username;
+        if (patch.Name != null) profile.Nickname = patch.Name;
         if (patch.Pronouns != null) profile.Pronouns = patch.Pronouns;
 
         if (patch.Avatar != null)
@@ -378,7 +378,7 @@ public static class ClassicMapper
             profile.AvatarData = avatarData;
         }
 
-        if (patch.Bio != null) profile.Description = patch.Bio;
+        if (patch.Bio != null) profile.Biography = patch.Bio;
         if (patch.Location != null) profile.Location = patch.Location;
         if (patch.Website != null) profile.Website = patch.Website;
 
