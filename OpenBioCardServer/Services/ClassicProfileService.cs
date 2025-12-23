@@ -175,4 +175,107 @@ public class ClassicProfileService
             throw; // Re-throw to let controller handle the 500 response
         }
     }
+    
+    /// <summary>
+    /// 增量更新用户 Profile (Smart Update)
+    /// </summary>
+    public async Task<bool> PatchProfileAsync(string username, ClassicProfilePatch patch)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var profile = await _context.Profiles
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Username == username);
+
+            if (profile == null)
+            {
+                _logger.LogWarning("Attempted to patch non-existent profile: {Username}", username);
+                return false;
+            }
+
+            // 1. Update basic profile fields (Only non-nulls)
+            ClassicMapper.UpdateProfileFromPatch(profile, patch);
+
+            // 2. Handle Collections
+            // 逻辑：如果 Patch 中的集合为 null，则跳过（保持原样）。
+            // 如果 Patch 中的集合不为 null (即使是空列表)，则替换原有集合。
+
+            if (patch.Contacts != null)
+            {
+                await _context.ContactItems.Where(c => c.ProfileId == profile.Id).ExecuteDeleteAsync();
+                if (patch.Contacts.Any())
+                {
+                    var items = ClassicMapper.ToContactEntities(patch.Contacts, profile.Id);
+                    await _context.ContactItems.AddRangeAsync(items);
+                }
+            }
+
+            if (patch.SocialLinks != null)
+            {
+                await _context.SocialLinkItems.Where(s => s.ProfileId == profile.Id).ExecuteDeleteAsync();
+                if (patch.SocialLinks.Any())
+                {
+                    var items = ClassicMapper.ToSocialLinkEntities(patch.SocialLinks, profile.Id);
+                    await _context.SocialLinkItems.AddRangeAsync(items);
+                }
+            }
+
+            if (patch.Projects != null)
+            {
+                await _context.ProjectItems.Where(p => p.ProfileId == profile.Id).ExecuteDeleteAsync();
+                if (patch.Projects.Any())
+                {
+                    var items = ClassicMapper.ToProjectEntities(patch.Projects, profile.Id);
+                    await _context.ProjectItems.AddRangeAsync(items);
+                }
+            }
+
+            if (patch.WorkExperiences != null)
+            {
+                await _context.WorkExperienceItems.Where(w => w.ProfileId == profile.Id).ExecuteDeleteAsync();
+                if (patch.WorkExperiences.Any())
+                {
+                    var items = ClassicMapper.ToWorkExperienceEntities(patch.WorkExperiences, profile.Id);
+                    await _context.WorkExperienceItems.AddRangeAsync(items);
+                }
+            }
+
+            if (patch.SchoolExperiences != null)
+            {
+                await _context.SchoolExperienceItems.Where(s => s.ProfileId == profile.Id).ExecuteDeleteAsync();
+                if (patch.SchoolExperiences.Any())
+                {
+                    var items = ClassicMapper.ToSchoolExperienceEntities(patch.SchoolExperiences, profile.Id);
+                    await _context.SchoolExperienceItems.AddRangeAsync(items);
+                }
+            }
+
+            if (patch.Gallery != null)
+            {
+                await _context.GalleryItems.Where(g => g.ProfileId == profile.Id).ExecuteDeleteAsync();
+                if (patch.Gallery.Any())
+                {
+                    var items = ClassicMapper.ToGalleryEntities(patch.Gallery, profile.Id);
+                    await _context.GalleryItems.AddRangeAsync(items);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // 3. Invalidate Cache
+            await _cache.RemoveAsync(CacheKeys.GetClassicProfileCacheKey(username));
+            
+            _logger.LogInformation("Profile patched successfully for user: {Username}", username);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error patching profile for user: {Username}", username);
+            throw;
+        }
+    }
 }

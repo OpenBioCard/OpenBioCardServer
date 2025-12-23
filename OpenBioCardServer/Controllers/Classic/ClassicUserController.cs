@@ -51,38 +51,60 @@ public class ClassicUserController : ControllerBase
     }
 
     /// <summary>
-    /// Update user profile (requires authentication)
+    /// Patch user profile (Partial Update)
+    /// Only updates fields present in the JSON body.
     /// </summary>
     [HttpPost("{username}")]
-    public async Task<IActionResult> UpdateProfile(string username, [FromBody] ClassicProfile request)
+    public async Task<IActionResult> PatchProfile(string username, [FromBody] ClassicProfilePatch request)
     {
         var token = GetTokenFromHeader();
         
         if (string.IsNullOrEmpty(token))
-        {
             return Unauthorized(new ClassicErrorResponse("Missing authentication token"));
-        }
 
         var (isValid, account) = await _authService.ValidateTokenAsync(token);
 
-        if (!isValid || account == null)
-        {
+        if (!isValid || account == null || account.UserName != username)
             return Unauthorized(new ClassicErrorResponse("Invalid token"));
-        }
 
-        if (account.UserName != username)
+        try
         {
-            return Unauthorized(new ClassicErrorResponse("Invalid token"));
+            var success = await _profileService.PatchProfileAsync(username, request);
+            
+            if (!success)
+                return NotFound(new ClassicErrorResponse("Profile not found"));
+
+            return Ok(new ClassicSuccessResponse(true));
         }
+        catch (Exception)
+        {
+            return StatusCode(500, new ClassicErrorResponse("Profile update failed"));
+        }
+    }
+
+    /// <summary>
+    /// Full Update user profile (Legacy/Full Replace)
+    /// Replaces the entire profile with the provided data.
+    /// </summary>
+    [HttpPost("{username}/update")]
+    public async Task<IActionResult> FullUpdateProfile(string username, [FromBody] ClassicProfile request)
+    {
+        var token = GetTokenFromHeader();
+        
+        if (string.IsNullOrEmpty(token))
+            return Unauthorized(new ClassicErrorResponse("Missing authentication token"));
+
+        var (isValid, account) = await _authService.ValidateTokenAsync(token);
+
+        if (!isValid || account == null || account.UserName != username)
+            return Unauthorized(new ClassicErrorResponse("Invalid token"));
 
         try
         {
             var success = await _profileService.UpdateProfileAsync(username, request);
             
             if (!success)
-            {
                 return NotFound(new ClassicErrorResponse("Profile not found"));
-            }
 
             return Ok(new ClassicSuccessResponse(true));
         }
@@ -102,30 +124,19 @@ public class ClassicUserController : ControllerBase
         var token = GetTokenFromHeader();
         
         if (string.IsNullOrEmpty(token))
-        {
             return Unauthorized(new ClassicErrorResponse("Missing authentication token"));
-        }
 
         var (isValid, account) = await _authService.ValidateTokenAsync(token);
 
-        if (!isValid || account == null)
-        {
+        if (!isValid || account == null || account.UserName != username)
             return Unauthorized(new ClassicErrorResponse("Invalid token"));
-        }
-
-        if (account.UserName != username)
-        {
-            return Unauthorized(new ClassicErrorResponse("Invalid token"));
-        }
 
         try
         {
             var exportData = await _profileService.GetExportDataAsync(username, token);
             
             if (exportData == null)
-            {
                 return NotFound(new ClassicErrorResponse("User data not found"));
-            }
 
             return Ok(exportData);
         }
@@ -145,30 +156,19 @@ public class ClassicUserController : ControllerBase
         var token = GetTokenFromHeader();
         
         if (string.IsNullOrEmpty(token))
-        {
             return Unauthorized(new ClassicErrorResponse("Missing authentication token"));
-        }
 
         var (isValid, account) = await _authService.ValidateTokenAsync(token);
 
-        if (!isValid || account == null)
-        {
+        if (!isValid || account == null || account.UserName != username)
             return Unauthorized(new ClassicErrorResponse("Invalid token"));
-        }
-
-        if (account.UserName != username)
-        {
-            return Unauthorized(new ClassicErrorResponse("Invalid token"));
-        }
 
         try
         {
             var success = await _profileService.ImportDataAsync(username, request);
             
             if (!success)
-            {
                 return BadRequest(new ClassicErrorResponse("Import failed or username mismatch"));
-            }
 
             return Ok(new ClassicSuccessResponse(true));
         }

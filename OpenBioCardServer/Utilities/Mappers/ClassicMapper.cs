@@ -359,4 +359,50 @@ public static class ClassicMapper
 
         return null;
     }
+    // === Patch Update Logic ===
+
+    public static void UpdateProfileFromPatch(ProfileEntity profile, ClassicProfilePatch patch)
+    {
+        // 仅当字段不为 Null 时更新
+        // 注意：如果前端传空字符串 ""，这里会更新为空字符串，符合预期（清空字段）
+        
+        if (patch.Username != null) profile.Username = patch.Username;
+        if (patch.Name != null) profile.NickName = patch.Name;
+        if (patch.Pronouns != null) profile.Pronouns = patch.Pronouns;
+
+        if (patch.Avatar != null)
+        {
+            var (avatarType, avatarText, avatarData) = ParseAsset(patch.Avatar);
+            profile.AvatarType = avatarType;
+            profile.AvatarText = avatarText;
+            profile.AvatarData = avatarData;
+        }
+
+        if (patch.Bio != null) profile.Description = patch.Bio;
+        if (patch.Location != null) profile.Location = patch.Location;
+        if (patch.Website != null) profile.Website = patch.Website;
+
+        if (patch.Background != null)
+        {
+            // 如果传空字符串，视为删除背景
+            if (string.IsNullOrEmpty(patch.Background))
+            {
+                profile.BackgroundType = null;
+                profile.BackgroundText = null;
+                profile.BackgroundData = null;
+            }
+            else
+            {
+                var (bgType, bgText, bgData) = ParseAsset(patch.Background);
+                profile.BackgroundType = bgType;
+                profile.BackgroundText = bgText;
+                profile.BackgroundData = bgData;
+            }
+        }
+
+        if (patch.CurrentCompany != null) profile.CurrentCompany = patch.CurrentCompany;
+        if (patch.CurrentCompanyLink != null) profile.CurrentCompanyLink = patch.CurrentCompanyLink;
+        if (patch.CurrentSchool != null) profile.CurrentSchool = patch.CurrentSchool;
+        if (patch.CurrentSchoolLink != null) profile.CurrentSchoolLink = patch.CurrentSchoolLink;
+    }
 }
