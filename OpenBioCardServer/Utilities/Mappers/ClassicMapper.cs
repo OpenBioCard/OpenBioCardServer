@@ -421,19 +421,24 @@ public static class ClassicMapper
     }
     
     // === Helpers for Account Type ===
+    
     private static string ToUserTypeString(AccountType type) => type switch
     {
         AccountType.Company => "company",
         AccountType.Organization => "organization",
         AccountType.Personal => "personal",
-        _ => "personal" // Default Unknown or others to personal
+        AccountType.Unknown => "", 
+        _ => "personal" 
     };
+
     
     private static AccountType ParseUserType(string? type) => type?.ToLowerInvariant() switch
     {
         "company" => AccountType.Company,
         "organization" => AccountType.Organization,
         "personal" => AccountType.Personal,
-        _ => AccountType.Personal // Default to Personal as requested
+        "" => AccountType.Unknown,
+        "unknown" => AccountType.Unknown,
+        _ => AccountType.Personal 
     };
 }
