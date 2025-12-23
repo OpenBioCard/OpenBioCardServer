@@ -16,7 +16,15 @@ public class ProfileEntity
     
     [Required]
     [MaxLength(64)]
-    public string UserName { get; set; } = string.Empty;
+    public string AccountName { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// 语言代码 (ISO 639-1). 
+    /// null = 默认/主 Profile
+    /// "en", "ja" = 特定语言变体
+    /// </summary>
+    [MaxLength(16)]
+    public string? Language { get; set; }
     
     // Avatar (required Asset) - 扁平化存储
     public AssetType AvatarType { get; set; } = AssetType.Text;

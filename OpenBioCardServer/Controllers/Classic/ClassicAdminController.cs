@@ -197,7 +197,7 @@ public class ClassicAdminController : ControllerBase
             var profile = new ProfileEntity
             {
                 AccountId = newAccount.Id,
-                UserName = request.NewUsername,
+                AccountName = request.NewUsername,
                 AvatarType = AssetType.Text,
                 AvatarText = "👤"
             };

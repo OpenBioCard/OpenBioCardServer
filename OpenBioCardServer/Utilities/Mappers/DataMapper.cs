@@ -13,7 +13,7 @@ public static class DataMapper
     {
         var dto = new ProfileDto
         {
-            Username = profile.UserName,
+            Username = profile.AccountName,
             Avatar = ToAssetDto(profile.AvatarType, profile.AvatarText, profile.AvatarData),
             NickName = profile.Nickname,
             Pronouns = profile.Pronouns,
@@ -127,7 +127,7 @@ public static class DataMapper
     
     public static void UpdateProfileEntity(ProfileEntity entity, ProfileDto dto)
     {
-        entity.UserName = dto.Username;
+        entity.AccountName = dto.Username;
         entity.Nickname = dto.NickName;
         entity.Pronouns = dto.Pronouns;
         entity.Biography = dto.Description;

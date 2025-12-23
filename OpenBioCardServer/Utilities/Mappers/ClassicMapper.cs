@@ -13,7 +13,7 @@ public static class ClassicMapper
     {
         return new ClassicProfile
         {
-            Username = profile.UserName,
+            Username = profile.AccountName,
             Name = profile.Nickname ?? string.Empty,
             Pronouns = profile.Pronouns ?? string.Empty,
             Avatar = AssetToString(profile.AvatarType, profile.AvatarText, profile.AvatarData),
@@ -177,7 +177,7 @@ public static class ClassicMapper
 
     public static void UpdateProfileFromClassic(ProfileEntity profile, ClassicProfile classic)
     {
-        profile.UserName = classic.Username;
+        profile.AccountName = classic.Username;
         profile.Nickname = classic.Name;
         profile.Pronouns = classic.Pronouns;
         
@@ -366,7 +366,7 @@ public static class ClassicMapper
         // 仅当字段不为 Null 时更新
         // 注意：如果前端传空字符串 ""，这里会更新为空字符串，符合预期（清空字段）
         
-        if (patch.Username != null) profile.UserName = patch.Username;
+        if (patch.Username != null) profile.AccountName = patch.Username;
         if (patch.Name != null) profile.Nickname = patch.Name;
         if (patch.Pronouns != null) profile.Pronouns = patch.Pronouns;
 

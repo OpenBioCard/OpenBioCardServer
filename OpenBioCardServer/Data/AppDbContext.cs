@@ -64,7 +64,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ProfileEntity>(entity =>
         {
             // Unique index on Username (redundant with Account but useful)
-            entity.HasIndex(e => e.UserName).IsUnique();
+            entity.HasIndex(e => e.AccountName).IsUnique();
             
             // One-to-Many relationships with all child entities
             entity.HasMany(e => e.Contacts)

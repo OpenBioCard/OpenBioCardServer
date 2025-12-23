@@ -86,7 +86,7 @@ public class ClassicAuthController : ControllerBase
             var profile = new ProfileEntity
             {
                 AccountId = account.Id,
-                UserName = request.Username,
+                AccountName = request.Username,
                 AvatarType = AssetType.Text,
                 AvatarText = "👤"
             };

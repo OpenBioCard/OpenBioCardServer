@@ -126,7 +126,7 @@ public class AuthService
         var profile = new ProfileEntity
         {
             AccountId = accountId,
-            UserName = username,
+            AccountName = username,
             AvatarType = AssetType.Text,
             AvatarText = "👤"
         };

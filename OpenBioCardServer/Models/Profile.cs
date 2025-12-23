@@ -4,7 +4,9 @@ namespace OpenBioCardServer.Models;
 
 public class Profile
 {
-    public string UserName { get; set; } = string.Empty;
+    public string AccountName { get; set; } = string.Empty;
+    
+    public string? Language { get; set; }
     
     public AccountRole Role { get; set; } =  AccountRole.User;
     public AccountType Type { get; set; } = AccountType.Personal;

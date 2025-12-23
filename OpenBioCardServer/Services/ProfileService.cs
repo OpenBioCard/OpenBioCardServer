@@ -44,7 +44,7 @@ public class ProfileService
                     .Include(p => p.WorkExperiences)
                     .Include(p => p.SchoolExperiences)
                     .Include(p => p.Gallery)
-                    .FirstOrDefaultAsync(p => p.UserName == username, token);
+                    .FirstOrDefaultAsync(p => p.AccountName == username, token);
                 
                 return profile == null ? null : DataMapper.ToProfileDto(profile);
             });
@@ -79,7 +79,7 @@ public class ProfileService
         try
         {
             var profile = await _context.Profiles
-                .FirstOrDefaultAsync(p => p.UserName == username);
+                .FirstOrDefaultAsync(p => p.AccountName == username);
 
             if (profile == null)
             {
